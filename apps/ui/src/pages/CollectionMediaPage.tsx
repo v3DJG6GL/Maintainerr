@@ -4,7 +4,7 @@ import {
   supportsFeature,
   type MediaItem,
 } from '@maintainerr/contracts'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
 import type { ICollectionMedia } from '../components/Collection'
 import { invalidateMaintainerrStatusDetails } from '../components/Common/MediaCard/maintainerrStatus'
@@ -14,6 +14,7 @@ import {
   getCollectionMediaSortConfig,
   MediaLibrarySortControl,
   useMediaLibrarySort,
+  isAnalyticsBrowseSort,
 } from '../components/Common/MediaLibrarySortControl'
 import PageControlRow from '../components/Common/PageControlRow'
 import OverviewContent from '../components/Overview/Content'
@@ -23,6 +24,8 @@ import { useMediaServerType } from '../hooks/useMediaServerType'
 import { reportBulkOutcome } from '../utils/bulkOutcome'
 import type { CollectionDetailOutletContext } from './CollectionDetailPage'
 import GetApiHandler from '../utils/ApiHandler'
+import { useMediaAnalyticsBrowse } from '../hooks/useMediaAnalyticsBrowse'
+import { useMediaAnalyticsCapabilities } from '../api/media-analytics'
 
 export const mapCollectionMediaItemsToMediaData = (
   items: ICollectionMedia[],
@@ -53,6 +56,12 @@ const CollectionMediaPage = () => {
     applyBulkOutcome,
     resetSelection,
   } = useMediaSelection()
+  const browseScopeKey = `${mediaServerType}:${id}`
+  const previousBrowseScope = useRef(browseScopeKey)
+  const analytics = useMediaAnalyticsBrowse(browseScopeKey)
+  const capabilities = useMediaAnalyticsCapabilities(
+    mediaServerType ?? 'active',
+  )
   const fetchAmount = 30
   const mediaRef = useRef<ICollectionMedia[]>([])
   const libraryType = collection.type === 'movie' ? 'movie' : 'show'
@@ -61,9 +70,24 @@ const CollectionMediaPage = () => {
     collection.deleteAfterDays != null,
     supportsFeature(mediaServerType, MediaServerFeature.LIBRARY_STUDIO_SORT),
     true,
+    capabilities.data?.sources,
   )
-  const { sortValue, sortParams, onSortChange } =
-    useMediaLibrarySort(sortConfig)
+  const {
+    sortValue,
+    sortParams,
+    onSortChange,
+    options: sortOptions,
+    sortUnavailable,
+  } = useMediaLibrarySort(sortConfig)
+  const analyticsFeedback = sortUnavailable
+    ? {
+        status: 'error' as const,
+        message: t`The selected analytics source is unavailable. Choose another sort or reconnect the source.`,
+      }
+    : analytics.feedback
+  useEffect(() => {
+    if (sortUnavailable) analytics.cancel('unavailable')
+  }, [sortUnavailable, analytics.cancel])
 
   const appendMediaPage = useCallback((items: ICollectionMedia[]) => {
     const nextMedia = [...mediaRef.current, ...items]
@@ -92,6 +116,19 @@ const CollectionMediaPage = () => {
 
   const fetchCollectionMediaPage = useCallback(
     async (page: number, requestSortParams = sortParams) => {
+      if (isAnalyticsBrowseSort(requestSortParams)) {
+        try {
+          return await analytics.fetchPage<ICollectionMedia>({
+            scope: 'collection',
+            id: String(id),
+            ...requestSortParams,
+            offset: (page - 1) * fetchAmount,
+            limit: fetchAmount,
+          })
+        } catch {
+          return { totalSize: 0, items: [] }
+        }
+      }
       const query = new URLSearchParams({
         size: `${fetchAmount}`,
         ...(requestSortParams ?? {}),
@@ -102,7 +139,7 @@ const CollectionMediaPage = () => {
         items: ICollectionMedia[]
       }>(`/collections/media/${id}/content/${page}?${query.toString()}`)
     },
-    [fetchAmount, id, sortParams],
+    [fetchAmount, id, sortParams, analytics.fetchPage],
   )
 
   const fetchPage = useCallback(
@@ -127,6 +164,13 @@ const CollectionMediaPage = () => {
     onReset: resetMedia,
   })
 
+  useEffect(() => {
+    if (previousBrowseScope.current === browseScopeKey) return
+    previousBrowseScope.current = browseScopeKey
+    resetSelection()
+    resetAndLoad()
+  }, [browseScopeKey, resetSelection, resetAndLoad])
+
   const handleSortChange = (nextSortValue: string) => {
     const nextSortState = onSortChange(nextSortValue)
     if (!nextSortState) {
@@ -135,6 +179,7 @@ const CollectionMediaPage = () => {
 
     // A selection made against the previous item set must never survive into
     // the next one - same contract as the Overview sync.
+    analytics.cancel()
     resetSelection()
     resetAndLoad({
       fetchPage: (page) =>
@@ -196,39 +241,47 @@ const CollectionMediaPage = () => {
         controls={
           <MediaLibrarySortControl
             ariaLabel={t`Sort collection items`}
-            options={sortConfig.options}
+            options={sortOptions}
             value={sortValue}
             onSortChange={handleSortChange}
             isLoading={showRefreshing}
+            analyticsFeedback={analyticsFeedback}
+            onRetry={() => {
+              analytics.cancel()
+              resetSelection()
+              resetAndLoad()
+            }}
           />
         }
       />
 
-      <OverviewContent
-        dataFinished={true}
-        fetchData={() => {}}
-        loading={isLoading}
-        data={data}
-        collection={collection}
-        collectionPage={true}
-        extrasLoading={isLoadingExtra && !isLoading && hasMoreData}
-        selectionMode={selectionMode}
-        selectedMediaIds={selectedIds}
-        onToggleSelection={toggleSelection}
-        onRemove={removeMediaItem}
-        onItemPostponed={(id: string, addDate: string) => {
-          // Patch the local addDate so the "days left" badge reflects the new
-          // deletion date immediately, without refetching the page.
-          updateMedia((currentMedia) =>
-            currentMedia.map((item) =>
-              item.mediaServerId === id
-                ? { ...item, addDate: new Date(addDate) }
-                : item,
-            ),
-          )
-        }}
-        collectionInfo={media}
-      />
+      {analyticsFeedback?.status !== 'error' ? (
+        <OverviewContent
+          dataFinished={true}
+          fetchData={() => {}}
+          loading={isLoading}
+          data={data}
+          collection={collection}
+          collectionPage={true}
+          extrasLoading={isLoadingExtra && !isLoading && hasMoreData}
+          selectionMode={selectionMode}
+          selectedMediaIds={selectedIds}
+          onToggleSelection={toggleSelection}
+          onRemove={removeMediaItem}
+          onItemPostponed={(id: string, addDate: string) => {
+            // Patch the local addDate so the "days left" badge reflects the new
+            // deletion date immediately, without refetching the page.
+            updateMedia((currentMedia) =>
+              currentMedia.map((item) =>
+                item.mediaServerId === id
+                  ? { ...item, addDate: new Date(addDate) }
+                  : item,
+              ),
+            )
+          }}
+          collectionInfo={media}
+        />
+      ) : null}
     </div>
   )
 }

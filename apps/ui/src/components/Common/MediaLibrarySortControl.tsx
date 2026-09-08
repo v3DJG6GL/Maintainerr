@@ -2,6 +2,10 @@ import { t as globalT } from '@lingui/core/macro'
 import { useLingui } from '@lingui/react/macro'
 import {
   compareMediaItemsBySort,
+  isMediaAnalyticsSort,
+  getMediaAnalyticsSortSource,
+  type MediaAnalyticsSortField,
+  type MediaAnalyticsSource,
   type CollectionMediaSortParams,
   type MediaItem,
   type MediaLibrary,
@@ -10,6 +14,7 @@ import {
   type MediaSortOrder,
 } from '@maintainerr/contracts'
 import { useState } from 'react'
+import type { AnalyticsBrowseFeedback } from '../../hooks/useMediaAnalyticsBrowse'
 import { Select } from '../Forms/Select'
 import { SmallLoadingSpinner } from './LoadingSpinner'
 
@@ -23,6 +28,55 @@ type SortParams = {
   sort: string
   sortOrder: MediaSortOrder
 }
+
+export interface AnalyticsBrowseSortParams {
+  sort: MediaAnalyticsSortField
+  sortOrder: MediaSortOrder
+}
+export type BrowseLibrarySortParams =
+  MediaLibrarySortParams | AnalyticsBrowseSortParams
+export type BrowseSortParams =
+  CollectionMediaSortParams | AnalyticsBrowseSortParams
+export const isAnalyticsBrowseSort = (
+  params: SortParams | undefined,
+): params is AnalyticsBrowseSortParams =>
+  params !== undefined && isMediaAnalyticsSort(params.sort)
+
+const analyticsOptions = (
+  sources: readonly MediaAnalyticsSource[],
+): SortOption<AnalyticsBrowseSortParams>[] =>
+  sources.flatMap((source) => {
+    const labels =
+      source === 'tracearr'
+        ? [
+            globalT`Tracearr - Most played`,
+            globalT`Tracearr - Least played`,
+            globalT`Tracearr - Longest watch time`,
+            globalT`Tracearr - Shortest watch time`,
+          ]
+        : [
+            globalT`Streamystats - Most played`,
+            globalT`Streamystats - Least played`,
+            globalT`Streamystats - Longest watch time`,
+            globalT`Streamystats - Shortest watch time`,
+          ]
+    const playCount: MediaAnalyticsSortField =
+      source === 'tracearr' ? 'tracearrPlayCount' : 'streamystatsPlayCount'
+    const watchTime: MediaAnalyticsSortField =
+      source === 'tracearr' ? 'tracearrWatchTime' : 'streamystatsWatchTime'
+    return (
+      [
+        { sort: playCount, sortOrder: 'desc' },
+        { sort: playCount, sortOrder: 'asc' },
+        { sort: watchTime, sortOrder: 'desc' },
+        { sort: watchTime, sortOrder: 'asc' },
+      ] satisfies AnalyticsBrowseSortParams[]
+    ).map((sortParams, index) => ({
+      value: `${sortParams.sort}.${sortParams.sortOrder}`,
+      label: labels[index]!,
+      sortParams,
+    }))
+  })
 
 interface SortOption<TSortParams extends SortParams = MediaLibrarySortParams> {
   value: string
@@ -125,8 +179,14 @@ const getMediaLibrarySortOptions = (
     ),
     createMediaLibrarySortOption('rating.desc', globalT`Rating Descending`),
     createMediaLibrarySortOption('rating.asc', globalT`Rating Ascending`),
-    createMediaLibrarySortOption('watchCount.desc', globalT`Most Watched`),
-    createMediaLibrarySortOption('watchCount.asc', globalT`Least Watched`),
+    createMediaLibrarySortOption(
+      'watchCount.desc',
+      globalT`Media server - Most played`,
+    ),
+    createMediaLibrarySortOption(
+      'watchCount.asc',
+      globalT`Media server - Least played`,
+    ),
   )
 
   return options
@@ -135,7 +195,8 @@ const getMediaLibrarySortOptions = (
 export const getMediaLibrarySortConfig = (
   libraryType?: MediaLibrary['type'],
   includeStudioSort: boolean = false,
-): SortConfig<MediaLibrarySortParams> => {
+  sources: readonly MediaAnalyticsSource[] = [],
+): SortConfig<BrowseLibrarySortParams> => {
   return {
     defaultValue: defaultOverviewSortValue,
     options: [
@@ -149,6 +210,7 @@ export const getMediaLibrarySortConfig = (
       }),
       createMediaLibrarySortOption('manual.desc', globalT`Manual Added First`),
       createMediaLibrarySortOption('excluded.desc', globalT`Excluded First`),
+      ...analyticsOptions(sources),
     ],
   }
 }
@@ -157,7 +219,8 @@ export const getCollectionSortConfig = (
   libraryType?: MediaLibrary['type'],
   defaultLabel?: string,
   includeStudioSort: boolean = false,
-): SortConfig<MediaLibrarySortParams> => {
+  sources: readonly MediaAnalyticsSource[] = [],
+): SortConfig<BrowseLibrarySortParams> => {
   return {
     defaultValue: defaultSortValue,
     options: [
@@ -166,6 +229,7 @@ export const getCollectionSortConfig = (
         label: defaultLabel ?? globalT`Recently Excluded`,
       },
       ...getMediaLibrarySortOptions(libraryType, { includeStudioSort }),
+      ...analyticsOptions(sources),
     ],
   }
 }
@@ -189,11 +253,13 @@ export const getCollectionMediaSortConfig = (
   includeDeleteSoonest: boolean = false,
   includeStudioSort: boolean = false,
   includeStatusSorts: boolean = false,
-): SortConfig<CollectionMediaSortParams> => {
+  sources: readonly MediaAnalyticsSource[] = [],
+): SortConfig<BrowseSortParams> => {
   const options = getCollectionSortConfig(
     libraryType,
     globalT`Recently Added`,
     includeStudioSort,
+    sources,
   )
     .options.map((option) => ({
       value: option.value,
@@ -268,24 +334,56 @@ interface MediaLibrarySortControlProps {
   value: string
   onSortChange: (value: string) => void
   isLoading?: boolean
+  analyticsFeedback?: AnalyticsBrowseFeedback
+  onRetry?: () => void
 }
 
 export const useMediaLibrarySort = <TSortParams extends SortParams>(
   config: SortConfig<TSortParams>,
 ) => {
   const [sortValue, setSortValue] = useState(config.defaultValue)
+  const [retainedAnalyticsOption, setRetainedAnalyticsOption] =
+    useState<SortOption<TSortParams>>()
+  const sortUnavailable = Boolean(
+    retainedAnalyticsOption &&
+    retainedAnalyticsOption.value === sortValue &&
+    !config.options.some((option) => option.value === sortValue),
+  )
+  const retainedLabel =
+    retainedAnalyticsOption &&
+    isAnalyticsBrowseSort(retainedAnalyticsOption.sortParams)
+      ? (analyticsOptions([
+          getMediaAnalyticsSortSource(retainedAnalyticsOption.sortParams.sort),
+        ]).find((option) => option.value === retainedAnalyticsOption.value)
+          ?.label ?? retainedAnalyticsOption.label)
+      : ''
+  const options =
+    sortUnavailable && retainedAnalyticsOption
+      ? [
+          ...config.options,
+          {
+            ...retainedAnalyticsOption,
+            label: globalT`${retainedLabel} (unavailable)`,
+          },
+        ]
+      : config.options
   const resolvedSortOption = getResolvedSortOption(
-    config.options,
+    options,
     sortValue,
     config.defaultValue,
   )
 
   const onSortChange = (nextValue: string) => {
-    const nextSortOption = getSortOptionByValue(config.options, nextValue)
+    const nextSortOption = getSortOptionByValue(options, nextValue)
     if (!nextSortOption || nextSortOption.value === resolvedSortOption.value) {
       return undefined
     }
 
+    setRetainedAnalyticsOption(
+      isAnalyticsBrowseSort(nextSortOption.sortParams)
+        ? nextSortOption
+        : undefined,
+    )
     setSortValue((currentValue) =>
       currentValue === nextSortOption.value
         ? currentValue
@@ -296,6 +394,8 @@ export const useMediaLibrarySort = <TSortParams extends SortParams>(
   }
 
   return {
+    options,
+    sortUnavailable,
     sortValue: resolvedSortOption.value,
     sortParams: resolvedSortOption.sortParams,
     onSortChange,
@@ -308,8 +408,24 @@ export const MediaLibrarySortControl = ({
   value,
   onSortChange,
   isLoading = false,
+  analyticsFeedback,
+  onRetry,
 }: MediaLibrarySortControlProps) => {
-  const { t } = useLingui()
+  const { t, i18n } = useLingui()
+  const activeFeedback = isMediaAnalyticsSort(value.split('.')[0] ?? '')
+    ? analyticsFeedback
+    : undefined
+  const updatedAt =
+    activeFeedback?.status === 'ready'
+      ? new Date(activeFeedback.updatedAt)
+      : undefined
+  const updatedDate =
+    updatedAt && !Number.isNaN(updatedAt.getTime())
+      ? new Intl.DateTimeFormat(i18n.locale, {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        }).format(updatedAt)
+      : undefined
 
   return (
     <div className="relative w-full">
@@ -326,7 +442,33 @@ export const MediaLibrarySortControl = ({
           </option>
         ))}
       </Select>
-      {isLoading ? (
+      {activeFeedback?.status === 'preparing' &&
+      value.startsWith('streamystats') ? (
+        <p className="mt-1 text-xs text-zinc-400">{t`Preparing cached Streamystats statistics. The first use may take a while.`}</p>
+      ) : null}
+      {updatedDate ? (
+        <p className="mt-1 text-xs text-zinc-400">{t`Statistics updated ${updatedDate}`}</p>
+      ) : null}
+      {activeFeedback?.status === 'preparing' ? (
+        <p role="status" className="mt-1 text-xs text-zinc-300">
+          {activeFeedback.total == null
+            ? t`Preparing analytics sort...`
+            : t`Preparing analytics sort: ${activeFeedback.completed} of ${activeFeedback.total}`}
+        </p>
+      ) : null}
+      {activeFeedback?.status === 'error' ? (
+        <div role="alert" className="mt-1 text-xs text-error-400">
+          {activeFeedback.message}{' '}
+          {onRetry ? (
+            <button
+              type="button"
+              className="underline"
+              onClick={onRetry}
+            >{t`Retry`}</button>
+          ) : null}
+        </div>
+      ) : null}
+      {isLoading && !activeFeedback ? (
         <div
           role="status"
           aria-label={t`Loading sorted items`}

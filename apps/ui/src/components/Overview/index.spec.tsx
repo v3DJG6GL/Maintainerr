@@ -1,3 +1,7 @@
+import axios from 'axios'
+import SearchContext from '../../contexts/search-context'
+import { useMediaAnalyticsCapabilities } from '../../api/media-analytics'
+import { buildQuerySuccessResult } from '../../test-utils/queryResults'
 import { MediaServerType, type MediaLibrary } from '@maintainerr/contracts'
 import { fireEvent, render, screen, waitFor } from '../../test-utils/render'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -12,8 +16,13 @@ import {
 import type { MediaActionOutcome } from '../Common/MediaActionModal'
 import Overview, { buildLibraryContentQuery } from './index'
 
+vi.mock('../../api/media-analytics', () => ({
+  useMediaAnalyticsCapabilities: vi.fn(() => ({ data: { sources: [] } })),
+}))
+
 vi.mock('../../utils/ApiHandler', () => ({
   default: vi.fn(),
+  API_BASE_PATH: '',
 }))
 
 vi.mock('../../hooks/useMediaServerType', () => ({
@@ -1022,4 +1031,55 @@ describe('Overview', () => {
       contentText.indexOf('Alpha'),
     )
   })
+})
+
+it('sorts the full search through the explicit analytics endpoint without native resorting', async () => {
+  vi.mocked(useMediaServerType).mockReturnValue(
+    buildMediaServerTypeResult(MediaServerType.JELLYFIN),
+  )
+  vi.mocked(useMediaAnalyticsCapabilities).mockReturnValue(
+    buildQuerySuccessResult({ sources: ['tracearr'] }),
+  )
+  vi.mocked(GetApiHandler).mockResolvedValue([
+    { id: 'native-item', title: 'Sample Native Item', type: 'movie' },
+  ])
+  const get = vi.spyOn(axios, 'get').mockResolvedValue({
+    data: {
+      status: 'ready',
+      snapshotId: 'search-snapshot',
+      updatedAt: '2026-09-08',
+      totalSize: 2,
+      items: [
+        { id: 'z', title: 'Z Sample', type: 'movie' },
+        { id: 'a', title: 'A Sample', type: 'movie' },
+      ],
+    },
+  })
+  render(
+    <SearchContext
+      value={{
+        search: { text: 'Sample' },
+        addText: () => {},
+        removeText: () => {},
+      }}
+    >
+      <Overview />
+    </SearchContext>,
+  )
+  await screen.findByText('Sample Native Item')
+  fireEvent.change(
+    screen.getByRole('combobox', { name: 'Sort overview items' }),
+    { target: { value: 'tracearrWatchTime.desc' } },
+  )
+  await screen.findByText('Z Sample')
+  const url = new URL(String(get.mock.calls[0]?.[0]), 'http://localhost')
+  expect(url.searchParams.get('scope')).toBe('search')
+  expect(url.searchParams.get('id')).toBe('Sample')
+  expect(url.searchParams.get('sort')).toBe('tracearrWatchTime')
+  expect(
+    vi
+      .mocked(GetApiHandler)
+      .mock.calls.filter(([path]) => String(path).includes('sort=tracearr')),
+  ).toHaveLength(0)
+  get.mockRestore()
 })

@@ -108,6 +108,9 @@ integrations, and production static serving.
   service data.
 - `src/modules/collections/` tracks matched media, exclusions, collection logs,
   posters, and collection handling actions.
+- `src/modules/media-analytics/` composes media, collection and analytics APIs
+  for source-specific browsing snapshots. It sorts complete snapshots before
+  pagination and keeps native media-server collection ordering independent.
 - `src/modules/actions/` contains the Radarr, Sonarr and Sportarr action handlers
   for destructive or state-changing Servarr actions such as delete, unmonitor,
   and quality profile changes, plus the opt-in leftover-folder cleanup - the one

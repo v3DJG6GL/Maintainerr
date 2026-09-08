@@ -31,9 +31,13 @@ import {
   MediaLibrarySortControl,
   sortMediaItems,
   useMediaLibrarySort,
+  isAnalyticsBrowseSort,
+  type BrowseLibrarySortParams,
 } from '../Common/MediaLibrarySortControl'
 import { invalidateMaintainerrStatusDetails } from '../Common/MediaCard/maintainerrStatus'
 import OverviewContent from './Content'
+import { useMediaAnalyticsBrowse } from '../../hooks/useMediaAnalyticsBrowse'
+import { useMediaAnalyticsCapabilities } from '../../api/media-analytics'
 
 interface OverviewBootstrapResult {
   libraries: MediaLibrary[]
@@ -107,6 +111,11 @@ const Overview = () => {
   const SearchCtx = use(SearchContext)
   const { mediaServerType } = useMediaServerType()
 
+  const analytics = useMediaAnalyticsBrowse(mediaServerType ?? 'active')
+  const capabilities = useMediaAnalyticsCapabilities(
+    mediaServerType ?? 'active',
+  )
+
   const defaultLibraryId = libraries?.[0]?.id
   const effectiveSelectedLibraryId =
     selectedLibrary &&
@@ -121,11 +130,38 @@ const Overview = () => {
     MediaServerFeature.LIBRARY_STUDIO_SORT,
   )
   const sortConfig = useMemo(
-    () => getMediaLibrarySortConfig(currentLibraryType, supportsStudioSort),
-    [currentLibraryType, supportsStudioSort],
+    () =>
+      getMediaLibrarySortConfig(
+        currentLibraryType,
+        supportsStudioSort,
+        effectiveSelectedLibraryId || SearchCtx.search.text
+          ? capabilities.data?.sources
+          : [],
+      ),
+    [
+      currentLibraryType,
+      supportsStudioSort,
+      capabilities.data?.sources,
+      effectiveSelectedLibraryId,
+      SearchCtx.search.text,
+    ],
   )
-  const { sortValue, sortParams, onSortChange } =
-    useMediaLibrarySort(sortConfig)
+  const {
+    sortValue,
+    sortParams,
+    onSortChange,
+    options: sortOptions,
+    sortUnavailable,
+  } = useMediaLibrarySort(sortConfig)
+  const analyticsFeedback = sortUnavailable
+    ? {
+        status: 'error' as const,
+        message: t`The selected analytics source is unavailable. Choose another sort or reconnect the source.`,
+      }
+    : analytics.feedback
+  useEffect(() => {
+    if (sortUnavailable) analytics.cancel('unavailable')
+  }, [sortUnavailable, analytics.cancel])
 
   const fetchAmount = 30
 
@@ -145,11 +181,14 @@ const Overview = () => {
 
   const invalidateFetches = useCallback(() => {
     invalidate()
+    analytics.cancel()
     setFetching(false)
-  }, [invalidate])
+  }, [invalidate, analytics.cancel])
 
   const fetchBootstrapData = useCallback(
-    async (requestSortParams = sortParams) => {
+    async (
+      requestSortParams: BrowseLibrarySortParams | undefined = sortParams,
+    ) => {
       invalidateFetches()
       bootstrapRequestedRef.current = true
       setFetching(true)
@@ -161,7 +200,9 @@ const Overview = () => {
       try {
         const query = new URLSearchParams({
           limit: `${fetchAmount}`,
-          ...(requestSortParams ?? {}),
+          ...(!isAnalyticsBrowseSort(requestSortParams)
+            ? (requestSortParams ?? {})
+            : { sort: 'title', sortOrder: 'asc' }),
         })
 
         const result = await guardedFetch<OverviewBootstrapResult>(() =>
@@ -217,10 +258,12 @@ const Overview = () => {
         preservedPageCount?: number
       },
     ) => {
+      const analyticsSearch =
+        SearchCtx.search.text !== '' && isAnalyticsBrowseSort(requestSortParams)
       if (
         fetchingRef.current ||
-        !libraryId ||
-        SearchCtx.search.text !== '' ||
+        (!libraryId && !analyticsSearch) ||
+        (SearchCtx.search.text !== '' && !analyticsSearch) ||
         (!options?.replaceExisting &&
           !(totalSizeRef.current >= pageDataRef.current * fetchAmount))
       ) {
@@ -245,16 +288,33 @@ const Overview = () => {
             ? preservedPageCount * fetchAmount
             : fetchAmount,
           libraryType,
-          sortParams: requestSortParams,
+          sortParams: isAnalyticsBrowseSort(requestSortParams)
+            ? undefined
+            : requestSortParams,
         })
 
         const result = await guardedFetch<{
           totalSize: number
           items: MediaItem[]
         }>(() =>
-          GetApiHandler(
-            `/media-server/library/${libraryId}/content?${query.toString()}`,
-          ),
+          isAnalyticsBrowseSort(requestSortParams)
+            ? analytics.fetchPage<MediaItem>({
+                scope: analyticsSearch ? 'search' : 'library',
+                id: analyticsSearch ? SearchCtx.search.text : String(libraryId),
+                ...(!analyticsSearch && libraryType
+                  ? { type: libraryType }
+                  : {}),
+                ...requestSortParams,
+                offset: options?.replaceExisting
+                  ? 0
+                  : pageDataRef.current * fetchAmount,
+                limit: preservedPageCount
+                  ? preservedPageCount * fetchAmount
+                  : fetchAmount,
+              })
+            : GetApiHandler(
+                `/media-server/library/${libraryId}/content?${query.toString()}`,
+              ),
         )
 
         if (result.status === 'success') {
@@ -286,6 +346,7 @@ const Overview = () => {
     },
     [
       SearchCtx.search.text,
+      analytics.fetchPage,
       clearSelection,
       effectiveSelectedLibraryId,
       guardedFetch,
@@ -302,6 +363,13 @@ const Overview = () => {
       // switch, a sort change, or leaving search), so a selection made against
       // the previous set must never survive into the next one.
       clearSelection()
+      if (isAnalyticsBrowseSort(nextSortParams)) {
+        dataRef.current = []
+        setData([])
+        pageDataRef.current = 0
+        totalSizeRef.current = 999
+        setTotalSize(999)
+      }
 
       if (SearchCtx.search.text !== '') {
         setLoading(true)
@@ -312,15 +380,35 @@ const Overview = () => {
 
         const searchData = async () => {
           try {
-            const result = await guardedFetch<MediaItem[]>(() =>
-              GetApiHandler(`/media-server/search/${SearchCtx.search.text}`),
+            const result = await guardedFetch<{
+              items: MediaItem[]
+              totalSize: number
+            }>(() =>
+              isAnalyticsBrowseSort(nextSortParams)
+                ? analytics.fetchPage<MediaItem>({
+                    scope: 'search',
+                    id: SearchCtx.search.text,
+                    ...nextSortParams,
+                    offset: 0,
+                    limit: fetchAmount,
+                  })
+                : GetApiHandler<MediaItem[]>(
+                    `/media-server/search/${SearchCtx.search.text}`,
+                  ).then((items) => ({
+                    items: sortMediaItems(items, nextSortParams),
+                    totalSize: items.length,
+                  })),
             )
 
             if (result.status === 'success') {
               setSearchUsed(true)
-              setTotalSize(result.data.length)
-              pageDataRef.current = result.data.length * 50
-              setData(sortMediaItems(result.data, nextSortParams))
+              setTotalSize(result.data.totalSize)
+              totalSizeRef.current = result.data.totalSize
+              pageDataRef.current = isAnalyticsBrowseSort(nextSortParams)
+                ? 1
+                : result.data.items.length * 50
+              dataRef.current = result.data.items
+              setData(result.data.items)
               clearSelection()
               setLoading(false)
             }
@@ -365,6 +453,7 @@ const Overview = () => {
     },
     [
       SearchCtx.search.text,
+      analytics.fetchPage,
       applySelectedLibrary,
       clearSelection,
       fetchData,
@@ -398,7 +487,7 @@ const Overview = () => {
       return
     }
 
-    if (!effectiveSelectedLibraryId) {
+    if (!effectiveSelectedLibraryId && SearchCtx.search.text === '') {
       void fetchBootstrapData(nextSortState.sortParams)
       return
     }
@@ -555,7 +644,9 @@ const Overview = () => {
 
   const hasData = data.length > 0
   const resolvedLibraryId = effectiveSelectedLibraryId
-  const canRequestLibraryContent = Boolean(resolvedLibraryId)
+  const canRequestLibraryContent =
+    Boolean(resolvedLibraryId) ||
+    (searchUsed && isAnalyticsBrowseSort(sortParams))
   const hasMoreData = data.length < totalSize
   const showRefreshing = isLoading && hasData
   const showBootstrapLoading =
@@ -566,6 +657,20 @@ const Overview = () => {
       (!selectedLibrary &&
         libraries === undefined &&
         (!librariesError || Boolean(defaultLibraryId))))
+
+  const sortControl = (
+    <MediaLibrarySortControl
+      ariaLabel={t`Sort overview items`}
+      options={sortOptions}
+      value={sortValue}
+      onSortChange={handleSortChange}
+      isLoading={showRefreshing}
+      analyticsFeedback={analyticsFeedback}
+      onRetry={() => {
+        void performOverviewSync(effectiveSelectedLibraryId)
+      }}
+    />
+  )
 
   return (
     <>
@@ -604,20 +709,14 @@ const Overview = () => {
                     librariesError={!!librariesError}
                   />
                 </div>
-                <div className="w-full sm:w-[18rem]">
-                  <MediaLibrarySortControl
-                    ariaLabel={t`Sort overview items`}
-                    options={sortConfig.options}
-                    value={sortValue}
-                    onSortChange={handleSortChange}
-                    isLoading={showRefreshing}
-                  />
-                </div>
+                <div className="w-full sm:w-[18rem]">{sortControl}</div>
               </div>
-            ) : undefined
+            ) : (
+              sortControl
+            )
           }
         />
-        {showBootstrapLoading ? (
+        {analyticsFeedback?.status === 'error' ? null : showBootstrapLoading ? (
           <div className="min-h-80">
             <LoadingSpinner />
           </div>
@@ -635,10 +734,10 @@ const Overview = () => {
           />
         ) : (
           <OverviewContent
-            dataFinished={true}
+            dataFinished={!canRequestLibraryContent || !hasMoreData}
             fetchData={fetchData}
             loading={isLoading}
-            extrasLoading={false}
+            extrasLoading={isLoadingExtra && !isLoading && hasMoreData}
             data={data}
             statusChangedMediaIds={statusChangedIds}
             selectionMode={selectionMode}

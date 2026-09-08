@@ -1,4 +1,5 @@
 import { MediaItemType } from './enums'
+import type { MediaPlaybackSummary } from '../media-analytics'
 import { MediaLibrarySortField, MediaSortOrder } from './sorting'
 
 /**
@@ -112,6 +113,8 @@ export interface MediaItem {
   }
   summary?: string
   viewCount?: number
+  /** Source-specific browsing snapshot; never replaces native viewCount. */
+  playbackSummary?: MediaPlaybackSummary
   skipCount?: number
   lastViewedAt?: Date
   year?: number

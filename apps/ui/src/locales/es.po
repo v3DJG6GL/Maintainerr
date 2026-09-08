@@ -260,6 +260,10 @@ msgstr "La configuración de {providerTitle} no se pudo actualizar"
 msgid "{providerTitle} settings updated"
 msgstr "Configuración de {providerTitle} actualizada"
 
+#: src/components/Common/MediaLibrarySortControl.tsx
+msgid "{retainedLabel} (unavailable)"
+msgstr ""
+
 #: src/components/Settings/About/Releases/index.tsx
 msgid "{secondsAgo, plural, one {# second ago} other {# seconds ago}}"
 msgstr "{secondsAgo, plural, one {Hace # segundo} other {Hace # segundos}}"
@@ -504,6 +508,14 @@ msgstr "La exclusión global de un elemento se quita en todas partes, no solo aq
 #: src/components/Layout/index.tsx
 msgid "An unexpected error occurred."
 msgstr "Se ha producido un error inesperado."
+
+#: src/hooks/useMediaAnalyticsBrowse.ts
+msgid "Analytics sorting is unavailable."
+msgstr ""
+
+#: src/hooks/useMediaAnalyticsBrowse.ts
+msgid "Analytics sorting is unavailable. Retry or choose another sort."
+msgstr ""
 
 #: src/components/Settings/Main/index.tsx
 #: src/components/Settings/Seerr/index.tsx
@@ -2191,10 +2203,6 @@ msgstr "Más reciente"
 msgid "Layers"
 msgstr "Capas"
 
-#: src/components/Common/MediaLibrarySortControl.tsx
-msgid "Least Watched"
-msgstr "Menos visto"
-
 #: src/components/Settings/DownloadClient/index.tsx
 msgid "Leave blank if the client's WebUI allows unauthenticated access."
 msgstr "Déjelo en blanco si la WebUI del cliente permite el acceso no autenticado."
@@ -2441,6 +2449,14 @@ msgstr "Servidor de contenido multimedia"
 msgid "Media Server"
 msgstr "Servidor de contenido multimedia"
 
+#: src/components/Common/MediaLibrarySortControl.tsx
+msgid "Media server - Least played"
+msgstr ""
+
+#: src/components/Common/MediaLibrarySortControl.tsx
+msgid "Media server - Most played"
+msgstr ""
+
 #: src/components/StorageMetrics/index.tsx
 msgid "Media server is not reachable. Check your Settings."
 msgstr "No se puede acceder al servidor de contenido multimedia. Verifique su configuración."
@@ -2506,10 +2522,6 @@ msgstr "Falta el identificador del cliente Plex. Actualiza la página y vuelve a
 #: src/components/Calendar/index.tsx
 msgid "Month"
 msgstr "Mes"
-
-#: src/components/Common/MediaLibrarySortControl.tsx
-msgid "Most Watched"
-msgstr "Más visto"
 
 #: src/components/StorageMetrics/index.tsx
 msgid "Mounts by instance"
@@ -3062,6 +3074,20 @@ msgstr "Posponiendo..."
 msgid "Potential reclaim by type"
 msgstr "Recuperación potencial por tipo"
 
+#. placeholder {0}: activeFeedback.completed
+#. placeholder {1}: activeFeedback.total
+#: src/components/Common/MediaLibrarySortControl.tsx
+msgid "Preparing analytics sort: {0} of {1}"
+msgstr ""
+
+#: src/components/Common/MediaLibrarySortControl.tsx
+msgid "Preparing analytics sort..."
+msgstr ""
+
+#: src/components/Common/MediaLibrarySortControl.tsx
+msgid "Preparing cached Streamystats statistics. The first use may take a while."
+msgstr ""
+
 #: src/pages/OverlayTemplateListPage.tsx
 msgid "Preset"
 msgstr "Preajuste"
@@ -3296,6 +3322,7 @@ msgstr "Recuperando servidores..."
 
 #: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+#: src/components/Common/MediaLibrarySortControl.tsx
 msgid "Retry"
 msgstr ""
 
@@ -3814,6 +3841,10 @@ msgstr "Iniciar ejecución"
 msgid "Start typing..."
 msgstr "Empieza a escribir..."
 
+#: src/components/Common/MediaLibrarySortControl.tsx
+msgid "Statistics updated {updatedDate}"
+msgstr ""
+
 #: src/components/Collection/CollectionItem/index.tsx
 #: src/components/Rules/RuleGroup/index.tsx
 #: src/components/StorageMetrics/index.tsx
@@ -3848,6 +3879,22 @@ msgstr "Biblioteca almacenada (no disponible)"
 #: src/components/Settings/Plex/index.tsx
 msgid "Stored Plex credentials are invalid. Re-authenticate with Plex."
 msgstr "Las credenciales de Plex almacenadas no son válidas. Vuelve a autenticarse con Plex."
+
+#: src/components/Common/MediaLibrarySortControl.tsx
+msgid "Streamystats - Least played"
+msgstr ""
+
+#: src/components/Common/MediaLibrarySortControl.tsx
+msgid "Streamystats - Longest watch time"
+msgstr ""
+
+#: src/components/Common/MediaLibrarySortControl.tsx
+msgid "Streamystats - Most played"
+msgstr ""
+
+#: src/components/Common/MediaLibrarySortControl.tsx
+msgid "Streamystats - Shortest watch time"
+msgstr ""
 
 #: src/components/Settings/Streamystats/index.tsx
 msgid "Streamystats configuration. Authentication reuses the configured Jellyfin API key."
@@ -4158,6 +4205,16 @@ msgstr "El grupo de reglas es de tipo serie; como resultado, solo se mostrarán 
 msgid "The saved library could not be found in the current library list. Re-select it once your media server is reachable."
 msgstr "La biblioteca guardada no se pudo encontrar en la lista de bibliotecas actual. Vuelve a seleccionarlo una vez que se pueda acceder a su servidor de contenido multimedia."
 
+#: src/components/Collection/CollectionDetail/Exclusions/index.tsx
+#: src/components/Overview/index.tsx
+#: src/pages/CollectionMediaPage.tsx
+msgid "The selected analytics source is unavailable. Choose another sort or reconnect the source."
+msgstr ""
+
+#: src/hooks/useMediaAnalyticsBrowse.ts
+msgid "The selected analytics source is unavailable. Retry after reconnecting it or choose another sort."
+msgstr ""
+
 #: src/components/Common/MediaActionModal.tsx
 msgid "The selected items could not be updated"
 msgstr "Los elementos seleccionados no se pudieron actualizar."
@@ -4197,6 +4254,10 @@ msgstr "Se produjo un error al actualizar la autenticación Plex."
 #: src/components/Common/MediaActionModal.tsx
 msgid "They are removed from every collection they are currently in as well."
 msgstr "También se eliminan de todas las colecciones en las que se encuentran actualmente."
+
+#: src/hooks/useMediaAnalyticsBrowse.ts
+msgid "This analytics snapshot expired. Retry to restart from the first page."
+msgstr ""
 
 #: src/components/Settings/Telemetry/index.tsx
 msgid "This is the exact report your server would send, stored only as anonymous counters."
@@ -4292,6 +4353,22 @@ msgstr "Esta instancia no informa el tamaño total; solo el espacio libre es exa
 
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
 msgid "Total watch time"
+msgstr ""
+
+#: src/components/Common/MediaLibrarySortControl.tsx
+msgid "Tracearr - Least played"
+msgstr ""
+
+#: src/components/Common/MediaLibrarySortControl.tsx
+msgid "Tracearr - Longest watch time"
+msgstr ""
+
+#: src/components/Common/MediaLibrarySortControl.tsx
+msgid "Tracearr - Most played"
+msgstr ""
+
+#: src/components/Common/MediaLibrarySortControl.tsx
+msgid "Tracearr - Shortest watch time"
 msgstr ""
 
 #: src/components/Settings/Tracearr/index.tsx

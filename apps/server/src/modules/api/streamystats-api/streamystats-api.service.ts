@@ -116,6 +116,7 @@ export class StreamystatsApiService {
 
   public async getItemDetailsResult(
     itemId: string,
+    { cacheResult = true }: { cacheResult?: boolean } = {},
   ): Promise<StreamystatsItemDetailsResult> {
     const api = this.api;
     if (!api) return { status: 'unavailable' };
@@ -134,7 +135,9 @@ export class StreamystatsApiService {
     const request = this.fetchItemDetails(api, serverId, itemId)
       .then((result) => {
         if (this.api !== api) return { status: 'unavailable' } as const;
-        if (result.status === 'ready') {
+        // Background ranking retains compact summaries, not thousands of
+        // full watch-history payloads. Interactive callers keep the cache.
+        if (cacheResult && result.status === 'ready') {
           cache?.set(key, result.data, WATCHLIST_HTTP_TTL_S);
         }
         return result;

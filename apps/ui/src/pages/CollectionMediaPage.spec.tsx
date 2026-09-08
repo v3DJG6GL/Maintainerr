@@ -20,8 +20,13 @@ const outletContext = {
   openMediaTestModal: vi.fn(),
 }
 
+vi.mock('../api/media-analytics', () => ({
+  useMediaAnalyticsCapabilities: vi.fn(() => ({ data: { sources: [] } })),
+}))
+
 vi.mock('../utils/ApiHandler', () => ({
   default: vi.fn(),
+  API_BASE_PATH: '',
 }))
 
 // The shared modal has its own spec; this only hands back an outcome.

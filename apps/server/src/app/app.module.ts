@@ -33,6 +33,7 @@ import { RulesModule } from '../modules/rules/rules.module';
 import { SettingsModule } from '../modules/settings/settings.module';
 import { SettingsDataService } from '../modules/settings/settings-data.service';
 import { StorageMetricsModule } from '../modules/storage-metrics/storage-metrics.module';
+import { MediaAnalyticsModule } from '../modules/media-analytics/media-analytics.module';
 import { TelemetryModule } from '../modules/telemetry/telemetry.module';
 import { VersionModule } from '../modules/version/version.module';
 import { AppController } from './app.controller';
@@ -67,6 +68,7 @@ import { resolveUiRootPath } from './config/uiPath';
     EventsModule,
     OverlaysModule,
     StorageMetricsModule,
+    MediaAnalyticsModule,
     TelemetryModule,
     VersionModule,
     ServeStaticModule.forRootAsync({

@@ -4,7 +4,7 @@ import {
   supportsFeature,
   type MediaItem,
 } from '@maintainerr/contracts'
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { ICollection } from '../..'
 import useInfinitePaginatedList from '../../../../hooks/useInfinitePaginatedList'
 import useMediaSelection from '../../../../hooks/useMediaSelection'
@@ -18,9 +18,12 @@ import {
   getCollectionSortConfig,
   MediaLibrarySortControl,
   useMediaLibrarySort,
+  isAnalyticsBrowseSort,
 } from '../../../Common/MediaLibrarySortControl'
 import PageControlRow from '../../../Common/PageControlRow'
 import OverviewContent from '../../../Overview/Content'
+import { useMediaAnalyticsBrowse } from '../../../../hooks/useMediaAnalyticsBrowse'
+import { useMediaAnalyticsCapabilities } from '../../../../api/media-analytics'
 
 interface ICollectionExclusions {
   collection: ICollection
@@ -48,14 +51,35 @@ const CollectionExcludions = (props: ICollectionExclusions) => {
     applyBulkOutcome,
     resetSelection,
   } = useMediaSelection()
+  const browseScopeKey = `${mediaServerType}:${props.collection.id}`
+  const previousBrowseScope = useRef(browseScopeKey)
+  const analytics = useMediaAnalyticsBrowse(browseScopeKey)
+  const capabilities = useMediaAnalyticsCapabilities(
+    mediaServerType ?? 'active',
+  )
   const libraryType = props.collection.type === 'movie' ? 'movie' : 'show'
   const sortConfig = getCollectionSortConfig(
     libraryType,
     undefined,
     supportsFeature(mediaServerType, MediaServerFeature.LIBRARY_STUDIO_SORT),
+    capabilities.data?.sources,
   )
-  const { sortValue, sortParams, onSortChange } =
-    useMediaLibrarySort(sortConfig)
+  const {
+    sortValue,
+    sortParams,
+    onSortChange,
+    options: sortOptions,
+    sortUnavailable,
+  } = useMediaLibrarySort(sortConfig)
+  const analyticsFeedback = sortUnavailable
+    ? {
+        status: 'error' as const,
+        message: t`The selected analytics source is unavailable. Choose another sort or reconnect the source.`,
+      }
+    : analytics.feedback
+  useEffect(() => {
+    if (sortUnavailable) analytics.cancel('unavailable')
+  }, [sortUnavailable, analytics.cancel])
 
   const mapExclusionItems = useCallback((items: IExclusionMedia[]) => {
     return items.map((item) => {
@@ -72,6 +96,19 @@ const CollectionExcludions = (props: ICollectionExclusions) => {
 
   const fetchExclusionsPage = useCallback(
     async (page: number, requestSortParams = sortParams) => {
+      if (isAnalyticsBrowseSort(requestSortParams)) {
+        try {
+          return await analytics.fetchPage<IExclusionMedia>({
+            scope: 'exclusions',
+            id: String(props.collection.id),
+            ...requestSortParams,
+            offset: (page - 1) * fetchAmount,
+            limit: fetchAmount,
+          })
+        } catch {
+          return { totalSize: 0, items: [] }
+        }
+      }
       const query = new URLSearchParams({
         size: `${fetchAmount}`,
         ...(requestSortParams ?? {}),
@@ -84,7 +121,7 @@ const CollectionExcludions = (props: ICollectionExclusions) => {
         `/collections/exclusions/${props.collection.id}/content/${page}?${query.toString()}`,
       )
     },
-    [fetchAmount, props.collection.id, sortParams],
+    [fetchAmount, props.collection.id, sortParams, analytics.fetchPage],
   )
 
   const fetchPage = useCallback(
@@ -107,6 +144,13 @@ const CollectionExcludions = (props: ICollectionExclusions) => {
     mapPageItems: mapExclusionItems,
   })
 
+  useEffect(() => {
+    if (previousBrowseScope.current === browseScopeKey) return
+    previousBrowseScope.current = browseScopeKey
+    resetSelection()
+    resetAndLoad()
+  }, [browseScopeKey, resetSelection, resetAndLoad])
+
   const handleSortChange = (nextSortValue: string) => {
     const nextSortState = onSortChange(nextSortValue)
     if (!nextSortState) {
@@ -115,6 +159,7 @@ const CollectionExcludions = (props: ICollectionExclusions) => {
 
     // A selection made against the previous item set must never survive into
     // the next one - same contract as the Overview sync.
+    analytics.cancel()
     resetSelection()
     resetAndLoad({
       fetchPage: (page) => fetchExclusionsPage(page, nextSortState.sortParams),
@@ -166,31 +211,39 @@ const CollectionExcludions = (props: ICollectionExclusions) => {
         controls={
           <MediaLibrarySortControl
             ariaLabel={t`Sort collection exclusions`}
-            options={sortConfig.options}
+            options={sortOptions}
             value={sortValue}
             onSortChange={handleSortChange}
             isLoading={showRefreshing}
+            analyticsFeedback={analyticsFeedback}
+            onRetry={() => {
+              analytics.cancel()
+              resetSelection()
+              resetAndLoad()
+            }}
           />
         }
       />
 
-      <OverviewContent
-        dataFinished={true}
-        fetchData={() => {}}
-        loading={isLoading}
-        data={data}
-        collectionPage={true}
-        collectionId={props.collection.id}
-        extrasLoading={isLoadingExtra && !isLoading && hasMoreData}
-        selectionMode={selectionMode}
-        selectedMediaIds={selectedIds}
-        onToggleSelection={toggleSelection}
-        onRemove={(id: string) =>
-          updateData((currentData) =>
-            currentData.filter((item) => item.id !== id),
-          )
-        }
-      />
+      {analyticsFeedback?.status !== 'error' ? (
+        <OverviewContent
+          dataFinished={true}
+          fetchData={() => {}}
+          loading={isLoading}
+          data={data}
+          collectionPage={true}
+          collectionId={props.collection.id}
+          extrasLoading={isLoadingExtra && !isLoading && hasMoreData}
+          selectionMode={selectionMode}
+          selectedMediaIds={selectedIds}
+          onToggleSelection={toggleSelection}
+          onRemove={(id: string) =>
+            updateData((currentData) =>
+              currentData.filter((item) => item.id !== id),
+            )
+          }
+        />
+      ) : null}
     </div>
   )
 }

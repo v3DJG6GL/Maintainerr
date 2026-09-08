@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { act, renderHook } from '../../test-utils/render'
 import {
   getCollectionMediaSortConfig,
   getCollectionSortConfig,
+  useMediaLibrarySort,
 } from './MediaLibrarySortControl'
 
 const statusSortValues = ['manual.desc', 'excluded.desc']
@@ -45,5 +47,88 @@ describe('getCollectionMediaSortConfig', () => {
         getCollectionMediaSortConfig('movie', true, false, true).options,
       ),
     ).not.toContain('studio.asc')
+  })
+})
+
+describe('analytics browsing sorts', () => {
+  it('retains the chosen analytics source when capabilities remove it until a native sort is selected', () => {
+    const { result, rerender } = renderHook(
+      ({ enabled }) =>
+        useMediaLibrarySort(
+          getCollectionSortConfig(
+            'movie',
+            undefined,
+            false,
+            enabled ? ['tracearr'] : [],
+          ),
+        ),
+      { initialProps: { enabled: true } },
+    )
+    act(() => {
+      result.current.onSortChange('tracearrWatchTime.desc')
+    })
+    rerender({ enabled: false })
+    expect(result.current.sortValue).toBe('tracearrWatchTime.desc')
+    expect(result.current.sortParams).toEqual({
+      sort: 'tracearrWatchTime',
+      sortOrder: 'desc',
+    })
+    expect(result.current.sortUnavailable).toBe(true)
+    expect(
+      result.current.options.find(
+        (option) => option.value === 'tracearrWatchTime.desc',
+      )?.label,
+    ).toContain('(unavailable)')
+    act(() => {
+      result.current.onSortChange('title.asc')
+    })
+    expect(result.current.sortUnavailable).toBe(false)
+    expect(result.current.sortParams).toEqual({
+      sort: 'title',
+      sortOrder: 'asc',
+    })
+    expect(
+      result.current.options.some(
+        (option) => option.value === 'tracearrWatchTime.desc',
+      ),
+    ).toBe(false)
+  })
+
+  it('keeps analytics out of the persisted rule sort selector unless browsing opts in', () => {
+    const native = valuesOf(getCollectionMediaSortConfig('movie', true).options)
+    expect(
+      native.some(
+        (value) =>
+          value.startsWith('tracearr') || value.startsWith('streamystats'),
+      ),
+    ).toBe(false)
+    const browse = getCollectionMediaSortConfig('movie', true, false, true, [
+      'tracearr',
+    ])
+    expect(valuesOf(browse.options)).toContain('tracearrWatchTime.desc')
+    expect(valuesOf(browse.options)).not.toContain('streamystatsWatchTime.desc')
+    expect(
+      browse.options.find((option) => option.value === 'tracearrPlayCount.desc')
+        ?.label,
+    ).toBe('Tracearr - Most played')
+    expect(
+      browse.options.find((option) => option.value === 'watchCount.desc')
+        ?.label,
+    ).toBe('Media server - Most played')
+  })
+
+  it('offers both count and time directions for the explicitly enabled source', () => {
+    const options = getCollectionSortConfig('show', undefined, false, [
+      'streamystats',
+    ]).options
+    expect(valuesOf(options)).toEqual(
+      expect.arrayContaining([
+        'streamystatsPlayCount.asc',
+        'streamystatsPlayCount.desc',
+        'streamystatsWatchTime.asc',
+        'streamystatsWatchTime.desc',
+      ]),
+    )
+    expect(valuesOf(options)).not.toContain('tracearrPlayCount.desc')
   })
 })
