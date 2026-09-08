@@ -85,6 +85,17 @@ describe('StreamystatsGetterService', () => {
     return { service, streamystatsApi, mediaServerFactory, getMetadata };
   };
 
+  it.each([LAST_PLAYED_AT_PROP_ID])(
+    'guards season operand %s even outside the editor',
+    async (id) => {
+      const { service, streamystatsApi } = createService();
+      expect(
+        await service.get(id, createMediaItem({ type: 'season' })),
+      ).toBeNull();
+      expect(streamystatsApi.getItemDetails).not.toHaveBeenCalled();
+    },
+  );
+
   it.each([
     WATCHLISTED_BY_USERS_PROP_ID,
     WATCHLISTED_BY_USERS_INCLUDING_PARENT_PROP_ID,

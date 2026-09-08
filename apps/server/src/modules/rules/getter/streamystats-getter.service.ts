@@ -50,6 +50,9 @@ export class StreamystatsGetterService {
       }
 
       if (prop.name === 'lastPlayedAt') {
+        if (libItem.type === 'season') {
+          return null;
+        }
         // Streamystats records every observed session, so its aggregate
         // lastWatched is the last play attempt. Null covers an unsynced item
         // and a failed read alike, so it stays transient (as getUserStat).
