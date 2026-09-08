@@ -85,6 +85,27 @@ describe('StreamystatsGetterService', () => {
     return { service, streamystatsApi, mediaServerFactory, getMetadata };
   };
 
+  it.each([
+    WATCHLISTED_BY_USERS_PROP_ID,
+    WATCHLISTED_BY_USERS_INCLUDING_PARENT_PROP_ID,
+  ])('does not drop an unresolved owner from property %s', async (id) => {
+    const item = createMediaItem({
+      type: 'episode',
+      id: 'item-1',
+      parentId: 'season-1',
+      grandparentId: 'show-1',
+    });
+    const { service, streamystatsApi } = createService(
+      [{ id: 'known', name: 'alice' }],
+      [item],
+    );
+    streamystatsApi.getWatchlistMembership.mockResolvedValue(
+      membershipOf({ 'item-1': ['known', 'missing'] }),
+    );
+    expect(await service.get(id, item)).toBeUndefined();
+    expect(await service.get(IS_IN_WATCHLIST_PROP_ID, item)).toBe(true);
+  });
+
   describe('isInWatchlist (property id=0)', () => {
     it('returns true when the item is in at least one public watchlist', async () => {
       const { service, streamystatsApi } = createService();
@@ -137,7 +158,7 @@ describe('StreamystatsGetterService', () => {
       expect(result.sort()).toEqual(['alice', 'bob']);
     });
 
-    it('omits owners that no longer resolve to a known user', async () => {
+    it('skips when any owner no longer resolves to a known user', async () => {
       const { service, streamystatsApi } = createService([
         { id: 'user-a', name: 'alice' },
       ]);
@@ -146,9 +167,9 @@ describe('StreamystatsGetterService', () => {
         membershipOf({ 'item-1': ['user-a', 'user-gone'] }),
       );
 
-      expect(await service.get(WATCHLISTED_BY_USERS_PROP_ID, libItem)).toEqual([
-        'alice',
-      ]);
+      expect(
+        await service.get(WATCHLISTED_BY_USERS_PROP_ID, libItem),
+      ).toBeUndefined();
     });
 
     it('returns undefined (transient skip) when the user lookup fails closed', async () => {

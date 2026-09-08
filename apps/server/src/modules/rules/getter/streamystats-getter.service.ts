@@ -232,12 +232,11 @@ export class StreamystatsGetterService {
     }
 
     const namesById = new Map(users.map((user) => [user.id, user.name]));
-    return userIds.reduce((acc, userId) => {
-      const name = namesById.get(userId);
-      if (name) {
-        acc.push(name);
-      }
-      return acc;
-    }, [] as string[]);
+    const names = userIds.map((userId) => namesById.get(userId));
+    // A partial list would make negative membership rules match known owners.
+    if (names.some((name) => !name)) {
+      return undefined;
+    }
+    return definedUniqueValues(names);
   }
 }
