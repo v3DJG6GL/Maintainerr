@@ -24,6 +24,26 @@ export interface MediaPlaybackSummary {
   lastPlayedAt: string | null
 }
 
+export interface MediaPlaybackUser {
+  id: string
+  name: string | null
+  playCount: number | null
+  totalWatchTimeMs: number | null
+  lastPlayedAt: string | null
+}
+
+/** Detailed analytics are fetched only when opening an item's details. */
+export interface MediaPlaybackDetails extends MediaPlaybackSummary {
+  externalUrl: string | null
+  averageCompletionPercent: number | null
+  users: MediaPlaybackUser[] | null
+  episodes: {
+    playedEpisodes: number | null
+    totalEpisodes: number | null
+    seasonsWithPlayback: number | null
+  } | null
+}
+
 export const mediaAnalyticsSortFields = [
   'tracearrPlayCount',
   'tracearrWatchTime',

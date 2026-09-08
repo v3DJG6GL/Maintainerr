@@ -18,6 +18,7 @@ import {
 } from '../api/tracearr-api/tracearr-api.service';
 import { CollectionsService } from '../collections/collections.service';
 import type { AnalyticsBrowseRequest } from './media-analytics.controller';
+import { SettingsDataService } from '../settings/settings-data.service';
 import { MediaAnalyticsService } from './media-analytics.service';
 
 const movie = (id: string, changes: Partial<MediaItem> = {}): MediaItem =>
@@ -112,7 +113,11 @@ describe('MediaAnalyticsService complete analytics snapshots', () => {
     getHistoryIndex: jest.fn(),
     getPlaybackSummary: jest.fn(),
   };
-  const streamystats = { api: {}, getItemDetailsResult: jest.fn() };
+  const streamystats = {
+    api: {},
+    getItemDetailsResult: jest.fn(),
+    getResolvedServerId: jest.fn(),
+  };
   const collections = {
     getCollectionMediaWithServerDataAndPaging: jest.fn(),
     getCollectionExclusionsWithServerDataAndPaging: jest.fn(),
@@ -151,6 +156,10 @@ describe('MediaAnalyticsService complete analytics snapshots', () => {
       collections as unknown as CollectionsService,
       enrichment as unknown as MediaItemEnrichmentService,
       createMockLogger(),
+      {
+        tracearr_url: 'https://tracearr.example/base/',
+        streamystats_url: 'https://streamystats.example/base/',
+      } as SettingsDataService,
     );
   });
 
@@ -515,5 +524,198 @@ describe('MediaAnalyticsService complete analytics snapshots', () => {
       playbackSummary: { playCount: 10, totalWatchTimeMs: 12000 },
     });
     expect(streamystats.getItemDetailsResult).toHaveBeenCalledTimes(4);
+  });
+
+  describe('unified item details', () => {
+    const streamyDetail = (plays = 2) => ({
+      status: 'ready',
+      data: {
+        item: { id: 'a' },
+        totalViews: plays,
+        totalWatchTime: 12.345,
+        completionRate: 45,
+        lastWatched: null,
+        usersWatched: [
+          {
+            user: { id: 'user', name: 'Sample User' },
+            watchCount: 2,
+            totalWatchTime: 12.345,
+            lastWatched: null,
+          },
+        ],
+        episodeStats: {
+          watchedEpisodes: 3,
+          totalEpisodes: 8,
+          watchedSeasons: 2,
+        },
+      },
+    });
+
+    it('normalizes Streamystats detail metrics and preserves the configured URL base path', async () => {
+      streamystats.getItemDetailsResult.mockResolvedValue(streamyDetail());
+      streamystats.getResolvedServerId.mockResolvedValue(4);
+      await expect(service.details('a', 'streamystats')).resolves.toEqual({
+        source: 'streamystats',
+        playCount: 2,
+        totalWatchTimeMs: 12345,
+        lastPlayedAt: null,
+        averageCompletionPercent: 45,
+        externalUrl: 'https://streamystats.example/base/servers/4/library/a',
+        users: [
+          {
+            id: 'user',
+            name: 'Sample User',
+            playCount: 2,
+            totalWatchTimeMs: 12345,
+            lastPlayedAt: null,
+          },
+        ],
+        episodes: {
+          playedEpisodes: 3,
+          totalEpisodes: 8,
+          seasonsWithPlayback: 2,
+        },
+      });
+    });
+
+    it('does not display empty upstream completion averages as zero percent', async () => {
+      streamystats.getItemDetailsResult.mockResolvedValue(streamyDetail(0));
+      streamystats.getResolvedServerId.mockResolvedValue(null);
+      await expect(service.details('a', 'streamystats')).resolves.toMatchObject(
+        {
+          playCount: 0,
+          averageCompletionPercent: null,
+          externalUrl: 'https://streamystats.example/base/',
+        },
+      );
+    });
+
+    it.each([-1, 101, Number.NaN])(
+      'keeps invalid completion %s unknown',
+      async (completionRate) => {
+        const result = streamyDetail();
+        result.data.completionRate = completionRate;
+        streamystats.getItemDetailsResult.mockResolvedValue(result);
+        await expect(
+          service.details('a', 'streamystats'),
+        ).resolves.toMatchObject({ averageCompletionPercent: null });
+      },
+    );
+
+    it('distinguishes missing Streamystats data from source outages', async () => {
+      streamystats.getItemDetailsResult.mockResolvedValue({
+        status: 'missing',
+      });
+      await expect(service.details('a', 'streamystats')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      streamystats.getItemDetailsResult.mockResolvedValue({
+        status: 'unavailable',
+      });
+      await expect(service.details('a', 'streamystats')).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
+    });
+
+    it('keeps overflowed aggregate and user durations unknown', async () => {
+      const result = streamyDetail();
+      result.data.totalWatchTime = Number.MAX_VALUE;
+      result.data.usersWatched[0].totalWatchTime = Number.MAX_VALUE;
+      streamystats.getItemDetailsResult.mockResolvedValue(result);
+      await expect(service.details('a', 'streamystats')).resolves.toMatchObject(
+        { totalWatchTimeMs: null, users: [{ totalWatchTimeMs: null }] },
+      );
+    });
+
+    it.each([true, false] as const)(
+      'preserves metadata absence handling in details when presence is %s',
+      async (exists) => {
+        server.getMetadata.mockResolvedValue(undefined);
+        server.itemExists.mockResolvedValue(exists);
+        await expect(
+          service.details('a', 'streamystats'),
+        ).rejects.toBeInstanceOf(
+          exists ? ServiceUnavailableException : NotFoundException,
+        );
+      },
+    );
+
+    it('rejects unavailable Tracearr history in details', async () => {
+      tracearr.getHistoryIndex.mockReturnValue(undefined);
+      await expect(service.details('a', 'tracearr')).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
+    });
+
+    it('rejects different item identity from the detailed endpoint', async () => {
+      streamystats.getItemDetailsResult.mockResolvedValue({
+        ...streamyDetail(),
+        data: { ...streamyDetail().data, item: { id: 'other' } },
+      });
+      await expect(service.details('a', 'streamystats')).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
+    });
+
+    it('uses the same Tracearr count and duration as the compact summary', async () => {
+      const result = await service.details('a', 'tracearr');
+      expect(result).toMatchObject({
+        source: 'tracearr',
+        playCount: 2,
+        totalWatchTimeMs: 240002,
+        averageCompletionPercent: 10,
+        externalUrl: 'https://tracearr.example/base/',
+        users: [
+          { id: 'user', name: null, playCount: 2, totalWatchTimeMs: 240002 },
+        ],
+      });
+      expect(streamystats.getItemDetailsResult).not.toHaveBeenCalled();
+    });
+
+    it('links a Tracearr movie through its canonical ID while retaining the configured base path', async () => {
+      const index = history({ a: 1 });
+      const uuid = '00000000-0000-4000-8000-000000000001';
+      index.rowsByRatingKey.get('a')[0].media_id = uuid;
+      tracearr.getHistoryIndex.mockReturnValue(index);
+      await expect(service.details('a', 'tracearr')).resolves.toMatchObject({
+        externalUrl: `https://tracearr.example/base/media/${uuid}`,
+      });
+    });
+
+    it('returns unavailable when detailed media presence cannot be checked', async () => {
+      server.getMetadata.mockResolvedValue(undefined);
+      server.itemExists.mockRejectedValue(
+        new Error('Media server unavailable'),
+      );
+      await expect(service.details('a', 'streamystats')).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
+    });
+
+    it('rejects settings changes while detailed Streamystats data is loading', async () => {
+      const started = deferred<void>();
+      const response = deferred<ReturnType<typeof streamyDetail>>();
+      streamystats.getItemDetailsResult.mockImplementationOnce(() => {
+        started.resolve();
+        return response.promise;
+      });
+      const pending = service.details('a', 'streamystats');
+      await started.promise;
+      service.invalidate();
+      response.resolve(streamyDetail());
+      await expect(pending).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
+
+    it('does not request season detail data that Streamystats cannot aggregate', async () => {
+      server.getMetadata.mockResolvedValue(movie('season', { type: 'season' }));
+      await expect(
+        service.details('season', 'streamystats'),
+      ).resolves.toMatchObject({
+        playCount: null,
+        users: null,
+        episodes: null,
+      });
+      expect(streamystats.getItemDetailsResult).not.toHaveBeenCalled();
+    });
   });
 });

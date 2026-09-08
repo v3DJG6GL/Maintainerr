@@ -5,6 +5,8 @@ export const tracearrHistoryItemSchema = z.object({
   server_id: z.uuid(),
   server_type: z.string().min(1),
   media_type: z.string().min(1),
+  media_id: z.uuid().nullable().optional(),
+  show_media_id: z.uuid().nullable().optional(),
   rating_key: z.string().min(1).nullable(),
   parent_rating_key: z.string().min(1).nullable(),
   grandparent_rating_key: z.string().min(1).nullable(),
@@ -18,6 +20,7 @@ export const tracearrHistoryItemSchema = z.object({
   stopped_at: z.iso.datetime().nullable(),
   user: z.object({
     id: z.uuid(),
+    username: z.string().nullable().optional(),
   }),
 })
 

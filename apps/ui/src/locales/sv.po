@@ -42,11 +42,6 @@ msgstr "(Nästa: {0})"
 msgid "[Image]"
 msgstr "[Bild]"
 
-#. placeholder {0}: watchedSeasons ?? 0
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
-msgid "{0, plural, one {# season with playback} other {# seasons with playback}}"
-msgstr ""
-
 #: src/components/StorageMetrics/index.tsx
 msgid "{accurateMountCount} of {mountCount} mounts report total capacity"
 msgstr "{accurateMountCount} av {mountCount} mounts rapporterar total kapacitet"
@@ -244,6 +239,14 @@ msgstr "{path} (sparat val; totalt utrymme ej tillgängligt)"
 msgid "{path} (saved selection)"
 msgstr "{path} (sparat val)"
 
+#: src/components/Common/MediaCard/MediaModal/MediaAnalyticsPanel.tsx
+msgid "{playedEpisodes, plural, one {# episode played} other {# episodes played}}"
+msgstr ""
+
+#: src/components/Common/MediaCard/MediaModal/MediaAnalyticsPanel.tsx
+msgid "{playedEpisodes}/{totalEpisodes} episodes played"
+msgstr ""
+
 #: src/components/Settings/Metadata/index.tsx
 msgid "{providerTitle} metadata refresh started"
 msgstr "Uppdatering av metadata från {providerTitle} startad"
@@ -262,6 +265,10 @@ msgstr "Inställningarna för {providerTitle} uppdaterade"
 
 #: src/components/Common/MediaLibrarySortControl.tsx
 msgid "{retainedLabel} (unavailable)"
+msgstr ""
+
+#: src/components/Common/MediaCard/MediaModal/MediaAnalyticsPanel.tsx
+msgid "{seasonsWithPlayback, plural, one {# season with playback} other {# seasons with playback}}"
 msgstr ""
 
 #: src/components/Settings/About/Releases/index.tsx
@@ -327,10 +334,6 @@ msgstr "{usedSize} använt av {totalSize}"
 #: src/components/Settings/About/Releases/index.tsx
 msgid "{version} Changelog"
 msgstr "Ändringslogg för {version}"
-
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
-msgid "{watchedEpisodes}/{totalEpisodes} episodes played"
-msgstr ""
 
 #: src/components/OverlayEditor/PropertiesPanel.tsx
 msgid "+ Text"
@@ -624,11 +627,11 @@ msgstr "Automatiska samlingar"
 msgid "Automatically sort items inside the collection on {mediaServerName}. Disabling later does not restore the default order - change it in {mediaServerName} if needed."
 msgstr "Sortera automatiskt objekten i samlingen på {mediaServerName}. Att stänga av senare återställer inte standardordningen - ändra den i {mediaServerName} vid behov."
 
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+#: src/components/Common/MediaCard/MediaModal/MediaAnalyticsPanel.tsx
 msgid "Average completion"
 msgstr ""
 
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+#: src/components/Common/MediaCard/MediaModal/MediaAnalyticsPanel.tsx
 msgid "Average completion of recorded playback sessions."
 msgstr ""
 
@@ -1724,6 +1727,10 @@ msgstr "Misslyckades med att initiera körning av regler."
 msgid "Failed to load {providerTitle} settings"
 msgstr "Inställningarna för {providerTitle} kunde inte läsas in"
 
+#: src/components/Common/MediaCard/MediaModal/MediaAnalyticsPanel.tsx
+msgid "Failed to load {sourceName} data"
+msgstr ""
+
 #: src/pages/CollectionDetailPage.tsx
 msgid "Failed to load collection. Check logs for details."
 msgstr "Samlingen kunde inte läsas in. Se loggarna för detaljer."
@@ -1739,14 +1746,6 @@ msgstr "Overlay-mallarna kunde inte läsas in"
 #: src/components/Settings/Plex/index.tsx
 msgid "Failed to load servers - press refresh to retry"
 msgstr "Servrarna kunde inte läsas in - tryck på uppdatera för att försöka igen"
-
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
-msgid "Failed to load Streamystats data"
-msgstr "Streamystats-data kunde inte läsas in"
-
-#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
-msgid "Failed to load Tracearr data"
-msgstr ""
 
 #: src/components/Collection/CollectionDetail/PostponeButton/index.tsx
 msgid "Failed to postpone the deletion for this item."
@@ -2062,7 +2061,7 @@ msgstr "Under de kommande"
 msgid "Inactive"
 msgstr "Inaktiv"
 
-#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
+#: src/components/Common/MediaCard/MediaModal/MediaAnalyticsPanel.tsx
 msgid "Includes recorded plays that were not completed."
 msgstr ""
 
@@ -2198,13 +2197,9 @@ msgstr "Största samlingarna"
 msgid "Last duration"
 msgstr "Senaste körtid"
 
-#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
+#: src/components/Common/MediaCard/MediaModal/MediaAnalyticsPanel.tsx
 msgid "Last played"
 msgstr ""
-
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
-msgid "Last watched"
-msgstr "Senast sedd"
 
 #: src/components/Settings/About/Releases/index.tsx
 msgid "Latest"
@@ -2621,6 +2616,10 @@ msgstr "Ny mall - Overlay-redigeraren - Maintainerr"
 msgid "Next"
 msgstr "Nästa"
 
+#: src/components/Common/MediaCard/MediaModal/MediaAnalyticsPanel.tsx
+msgid "No {sourceName} data available for this item."
+msgstr ""
+
 #: src/components/Settings/Telemetry/index.tsx
 msgid "No account, no id, no hostname, no {TERM_URL}, no {TERM_API} key, and nothing from your library."
 msgstr "Inget konto, inget id, inget värdnamn, ingen {TERM_URL}, ingen {TERM_API}-nyckel och ingenting från ditt bibliotek."
@@ -2729,24 +2728,15 @@ msgstr "Inga resultat"
 msgid "No scheduled actions"
 msgstr "Inga schemalagda åtgärder"
 
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
-msgid "No Streamystats data available for this item."
-msgstr ""
-
 #: src/components/Common/MediaCard/MediaModal/index.tsx
 msgid "No summary available."
 msgstr "Ingen sammanfattning tillgänglig."
-
-#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
-msgid "No Tracearr data available for this item."
-msgstr ""
 
 #: src/components/Rules/Rule/RuleCreator/RuleInput/index.tsx
 msgid "No users reported by the media server"
 msgstr "Inga användare rapporterade av mediaservern"
 
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
-#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
+#: src/components/Common/MediaCard/MediaModal/MediaAnalyticsPanel.tsx
 msgid "No watch history recorded yet."
 msgstr "Ingen visningshistorik registrerad ännu."
 
@@ -2970,8 +2960,7 @@ msgstr "Lösenord"
 msgid "Path unavailable"
 msgstr ""
 
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
-#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
+#: src/components/Common/MediaCard/MediaModal/MediaAnalyticsPanel.tsx
 msgid "Plays"
 msgstr "Uppspelningar"
 
@@ -3338,9 +3327,8 @@ msgstr "Återställa originalomslag för alla samlingar?"
 msgid "Retrieving servers..."
 msgstr "Hämtar servrar..."
 
+#: src/components/Common/MediaCard/MediaModal/MediaAnalyticsPanel.tsx
 #: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
-#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
 #: src/components/Common/MediaLibrarySortControl.tsx
 msgid "Retry"
 msgstr ""
@@ -3700,11 +3688,11 @@ msgctxt "Toggle layer visibility"
 msgid "Show"
 msgstr "Visa"
 
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+#: src/components/Common/MediaCard/MediaModal/MediaAnalyticsPanel.tsx
 msgid "Show all {userCount} users"
 msgstr ""
 
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+#: src/components/Common/MediaCard/MediaModal/MediaAnalyticsPanel.tsx
 msgid "Show fewer users"
 msgstr ""
 
@@ -4370,8 +4358,7 @@ msgstr "Totalt antal media i samlingar"
 msgid "Total size not reported by this instance - only free space is accurate."
 msgstr "Total storlek rapporteras inte av den här instansen - endast ledigt utrymme är tillförlitligt."
 
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
-#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
+#: src/components/Common/MediaCard/MediaModal/MediaAnalyticsPanel.tsx
 msgid "Total watch time"
 msgstr ""
 
@@ -4684,10 +4671,14 @@ msgstr "Använt"
 msgid "Useful Links"
 msgstr "Användbara länkar"
 
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+#: src/components/Common/MediaCard/MediaModal/MediaAnalyticsPanel.tsx
 #: src/components/Rules/Rule/RuleCreator/RuleInput/index.tsx
 msgid "User"
 msgstr "Användare"
+
+#: src/components/Common/MediaCard/MediaModal/MediaAnalyticsPanel.tsx
+msgid "User statistics unavailable."
+msgstr ""
 
 #: src/components/Login/Emby/EmbyLoginButton.tsx
 #: src/components/Settings/DownloadClient/index.tsx
@@ -4727,13 +4718,13 @@ msgstr "Visa ändringslogg"
 msgid "View Metadata"
 msgstr "Visa metadata"
 
+#: src/components/Common/MediaCard/MediaModal/MediaAnalyticsPanel.tsx
+msgid "View on {sourceName}"
+msgstr ""
+
 #: src/components/Settings/About/Releases/index.tsx
 msgid "View on GitHub"
 msgstr "Visa på GitHub"
-
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
-msgid "View on Streamystats"
-msgstr "Visa på Streamystats"
 
 #: src/components/Settings/Plex/index.tsx
 msgid "Wait for Plex authentication to finish before saving."
@@ -4751,7 +4742,7 @@ msgstr "Warn"
 msgid "Warning"
 msgstr "Varning"
 
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+#: src/components/Common/MediaCard/MediaModal/MediaAnalyticsPanel.tsx
 msgid "Watch time"
 msgstr "Visningstid"
 

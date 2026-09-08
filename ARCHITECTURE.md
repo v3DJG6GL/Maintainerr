@@ -111,6 +111,10 @@ integrations, and production static serving.
 - `src/modules/media-analytics/` composes media, collection and analytics APIs
   for source-specific browsing snapshots. It sorts complete snapshots before
   pagination and keeps native media-server collection ordering independent.
+  Item details normalize Tracearr and Streamystats data into one shared
+  contract and UI panel, while preserving each provider's recorded history.
+  Detailed user and episode statistics are fetched separately from the compact
+  summaries used for sorting.
 - `src/modules/actions/` contains the Radarr, Sonarr and Sportarr action handlers
   for destructive or state-changing Servarr actions such as delete, unmonitor,
   and quality profile changes, plus the opt-in leftover-folder cleanup - the one
@@ -164,6 +168,8 @@ Maintainerr integrates with:
 - Streamystats for Jellyfin item-level analytics surfaced on the media modal.
   Authentication reuses the configured Jellyfin API key. Emby is not supported
   upstream.
+- Tracearr for server-scoped playback history used in rules, browsing sorts,
+  and the shared analytics panel on media details.
 - TMDB and TVDB for metadata resolution, and the Sportarr metadata API for
   Sportarr leagues, which answers ahead of the primary provider for a show
   that carries a Sportarr id. It reads the configured Sportarr connections,

@@ -1,10 +1,13 @@
-import type { MediaPlaybackSummary } from '@maintainerr/contracts'
+import type {
+  MediaPlaybackDetails,
+  MediaAnalyticsSource,
+} from '@maintainerr/contracts'
 import { useQuery } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
 import GetApiHandler from '../utils/ApiHandler'
 
 interface MediaAnalyticsCapabilities {
-  sources: MediaPlaybackSummary['source'][]
+  sources: MediaAnalyticsSource[]
 }
 
 export const useMediaAnalyticsCapabilities = (sourceKey = 'active') =>
@@ -18,17 +21,17 @@ export const useMediaAnalyticsCapabilities = (sourceKey = 'active') =>
     retry: false,
   })
 
-export const useMediaPlaybackSummary = (
+export const useMediaPlaybackDetails = (
   itemId: string,
-  source: MediaPlaybackSummary['source'],
+  source: MediaAnalyticsSource,
   sourceKey: string,
 ) =>
   useQuery({
-    queryKey: ['media-analytics', sourceKey, source, 'item', itemId],
-    queryFn: async (): Promise<MediaPlaybackSummary | null> => {
+    queryKey: ['media-analytics', sourceKey, source, 'item-details', itemId],
+    queryFn: async (): Promise<MediaPlaybackDetails | null> => {
       try {
-        return await GetApiHandler<MediaPlaybackSummary>(
-          `/media-analytics/items/${encodeURIComponent(itemId)}?source=${source}`,
+        return await GetApiHandler<MediaPlaybackDetails>(
+          `/media-analytics/items/${encodeURIComponent(itemId)}/details?source=${source}`,
         )
       } catch (error) {
         if (isAxiosError(error) && error.response?.status === 404) return null

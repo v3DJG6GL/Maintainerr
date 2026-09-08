@@ -53,6 +53,18 @@ export class MediaAnalyticsController {
     return this.analytics.browse(request);
   }
 
+  @Get('items/:id/details')
+  details(
+    @Param('id') id: string,
+    @Query(
+      'source',
+      new ZodValidationPipe(z.enum(['tracearr', 'streamystats'])),
+    )
+    source: MediaAnalyticsSource,
+  ) {
+    return this.analytics.details(id, source);
+  }
+
   @Get('items/:id')
   item(
     @Param('id') id: string,

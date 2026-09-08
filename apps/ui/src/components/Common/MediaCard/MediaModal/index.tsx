@@ -23,9 +23,8 @@ import {
 } from '../../../../utils/mediaTypeUtils'
 import Button from '../../Button'
 import LoadingSpinner from '../../LoadingSpinner'
-import StreamystatsStatsPanel from './StreamystatsStatsPanel'
+import MediaAnalyticsPanel from './MediaAnalyticsPanel'
 import MediaStoragePanel from './MediaStoragePanel'
-import TracearrDetails from './TracearrDetails'
 import {
   emptyMaintainerrMediaStatusDetails,
   getMaintainerrStatusDetailsKey,
@@ -214,10 +213,21 @@ const MediaModalContent: React.FC<ModalContentProps> = memo(
     const [tautulliModalUrl, setTautulliModalUrl] = useState<string | null>(
       null,
     )
-    const [streamystatsItemUrl, setStreamystatsItemUrl] = useState<
+    const [streamystatsRootUrl, setStreamystatsRootUrl] = useState<
       string | null
     >(null)
+    const [streamystatsLink, setStreamystatsLink] = useState<{
+      itemId: string
+      rootUrl: string
+      url: string
+    } | null>(null)
+    const streamystatsItemUrl =
+      streamystatsLink?.itemId === String(id) &&
+      streamystatsLink.rootUrl === streamystatsRootUrl
+        ? streamystatsLink.url
+        : streamystatsRootUrl
     const [tracearrSource, setTracearrSource] = useState<string | null>(null)
+    const [tracearrUrl, setTracearrUrl] = useState<string | null>(null)
     const [metadata, setMetadata] = useState<MediaItem | null>(null)
     const [seerrConfigured, setSeerrConfigured] = useState<boolean>(false)
     // Keyed by the path it was fetched for, like the backdrop below, so a
@@ -422,6 +432,8 @@ const MediaModalContent: React.FC<ModalContentProps> = memo(
           if (!active) return
           setTautulliModalUrl(resp?.tautulli_url || null)
           setSeerrConfigured(!!resp?.seerr_url)
+          setTracearrUrl(resp?.tracearr_url || null)
+          setStreamystatsRootUrl(resp?.streamystats_url || null)
           setTracearrSource(
             resp?.tracearr_url && resp?.tracearr_api_key
               ? `${resp.tracearr_url}:${resp.tracearr_server_id ?? 'auto'}`
@@ -438,9 +450,11 @@ const MediaModalContent: React.FC<ModalContentProps> = memo(
           .then((info) => {
             if (!active) return
             if (info?.url && info.serverId != null) {
-              setStreamystatsItemUrl(
-                `${info.url}/servers/${info.serverId}/library/${id}`,
-              )
+              setStreamystatsLink({
+                itemId: String(id),
+                rootUrl: info.url,
+                url: `${info.url}/servers/${info.serverId}/library/${id}`,
+              })
             }
           })
           .catch(() => {})
@@ -838,15 +852,19 @@ const MediaModalContent: React.FC<ModalContentProps> = memo(
 
             <MediaStoragePanel itemId={String(id)} serverId={machineId} />
 
-            {tracearrSource && machineId ? (
-              <TracearrDetails
+            {tracearrSource && tracearrUrl && machineId ? (
+              <MediaAnalyticsPanel
+                source="tracearr"
+                itemUrl={tracearrUrl}
                 itemId={String(id)}
                 sourceKey={`${tracearrSource}:${machineId}`}
               />
             ) : null}
 
             {isJellyfin && streamystatsItemUrl ? (
-              <StreamystatsStatsPanel
+              <MediaAnalyticsPanel
+                source="streamystats"
+                sourceKey={`${streamystatsRootUrl}:${machineId ?? ''}`}
                 itemId={String(id)}
                 itemUrl={streamystatsItemUrl}
               />

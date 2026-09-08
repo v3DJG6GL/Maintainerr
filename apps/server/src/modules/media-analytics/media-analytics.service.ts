@@ -6,7 +6,9 @@ import {
   MediaItem,
   MediaItemType,
   MediaPlaybackSummary,
+  MediaPlaybackDetails,
   MediaServerType,
+  StreamystatsItemDetails,
 } from '@maintainerr/contracts';
 import {
   ConflictException,
@@ -23,9 +25,14 @@ import type { IMediaServerService } from '../api/media-server/media-server.inter
 import { StreamystatsApiService } from '../api/streamystats-api/streamystats-api.service';
 import { TracearrApiService } from '../api/tracearr-api/tracearr-api.service';
 import type { TracearrHistoryIndex } from '../api/tracearr-api/tracearr-api.service';
-import { summarizeTracearrPlayback } from '../api/tracearr-api/tracearr-playback-summary';
+import {
+  summarizeTracearrPlayback,
+  describeTracearrPlayback,
+} from '../api/tracearr-api/tracearr-playback-summary';
 import { CollectionsService } from '../collections/collections.service';
 import { MaintainerrLogger } from '../logging/logs.service';
+import { SettingsDataService } from '../settings/settings-data.service';
+import { mediaAnalyticsUrl } from './media-analytics-url';
 import type { AnalyticsBrowseRequest } from './media-analytics.controller';
 
 const MAX_ITEMS = 15000;
@@ -68,6 +75,25 @@ const unknownSummary = (
   lastPlayedAt: null,
 });
 
+const secondsToMilliseconds = (seconds: number): number | null => {
+  const milliseconds = seconds * 1000;
+  return Number.isFinite(milliseconds) && milliseconds >= 0
+    ? milliseconds
+    : null;
+};
+
+const streamystatsSummary = (
+  data: Pick<
+    StreamystatsItemDetails,
+    'totalViews' | 'totalWatchTime' | 'lastWatched'
+  >,
+): MediaPlaybackSummary => ({
+  source: 'streamystats',
+  playCount: data.totalViews,
+  totalWatchTimeMs: secondsToMilliseconds(data.totalWatchTime),
+  lastPlayedAt: data.lastWatched,
+});
+
 @Injectable()
 export class MediaAnalyticsService implements OnModuleDestroy {
   private readonly snapshots = new Map<string, Snapshot>();
@@ -85,6 +111,7 @@ export class MediaAnalyticsService implements OnModuleDestroy {
     private readonly collections: CollectionsService,
     private readonly enrichment: MediaItemEnrichmentService,
     private readonly logger: MaintainerrLogger,
+    private readonly settings: SettingsDataService,
   ) {
     logger.setContext(MediaAnalyticsService.name);
   }
@@ -128,23 +155,7 @@ export class MediaAnalyticsService implements OnModuleDestroy {
   ): Promise<MediaPlaybackSummary> {
     const client = await this.assertSource(source);
     const generation = this.generation;
-    const mediaServer = await this.factory.getService();
-    const item = await mediaServer.getMetadata(id);
-    if (!item) {
-      let exists: boolean;
-      try {
-        exists = await mediaServer.itemExists(id);
-      } catch {
-        throw new ServiceUnavailableException(
-          'Media item presence could not be checked.',
-        );
-      }
-      if (exists)
-        throw new ServiceUnavailableException(
-          'Media item metadata is unavailable.',
-        );
-      throw new NotFoundException('Media item no longer exists.');
-    }
+    const item = await this.requireMediaItem(id);
     if (source === 'tracearr') {
       await this.tracearr.prefetchHistory();
       if (!this.tracearr.getHistoryIndex())
@@ -162,6 +173,133 @@ export class MediaAnalyticsService implements OnModuleDestroy {
       );
     }
     return summary;
+  }
+
+  private async requireMediaItem(id: string): Promise<MediaItem> {
+    const mediaServer = await this.factory.getService();
+    const item = await mediaServer.getMetadata(id);
+    if (!item) {
+      let exists: boolean;
+      try {
+        exists = await mediaServer.itemExists(id);
+      } catch {
+        throw new ServiceUnavailableException(
+          'Media item presence could not be checked.',
+        );
+      }
+      if (exists)
+        throw new ServiceUnavailableException(
+          'Media item metadata is unavailable.',
+        );
+      throw new NotFoundException('Media item no longer exists.');
+    }
+    return item;
+  }
+
+  async details(
+    id: string,
+    source: MediaAnalyticsSource,
+  ): Promise<MediaPlaybackDetails> {
+    const client = await this.assertSource(source);
+    const generation = this.generation;
+    const item = await this.requireMediaItem(id);
+    const rootUrl = mediaAnalyticsUrl(
+      source === 'tracearr'
+        ? this.settings.tracearr_url
+        : this.settings.streamystats_url,
+    );
+    let details: MediaPlaybackDetails = {
+      ...unknownSummary(source),
+      externalUrl: rootUrl,
+      averageCompletionPercent: null,
+      users: null,
+      episodes: null,
+    };
+    if (source === 'tracearr') {
+      await this.tracearr.prefetchHistory();
+      const history = this.tracearr.getHistoryIndex();
+      if (!history)
+        throw new ServiceUnavailableException(
+          'Tracearr history is unavailable.',
+        );
+      const result = describeTracearrPlayback(history, item);
+      if (result)
+        details = {
+          ...result.details,
+          externalUrl: result.mediaId
+            ? mediaAnalyticsUrl(this.settings.tracearr_url, [
+                'media',
+                result.mediaId,
+              ])
+            : rootUrl,
+        };
+    } else if (['movie', 'show', 'episode'].includes(item.type)) {
+      const result = await this.streamystats.getItemDetailsResult(id);
+      if (result.status === 'unavailable')
+        throw new ServiceUnavailableException('Streamystats is unavailable.');
+      if (result.status === 'missing') {
+        if (
+          generation !== this.generation ||
+          client !== (await this.assertSource(source))
+        )
+          throw new ServiceUnavailableException(
+            'Analytics settings changed. Please retry.',
+          );
+        throw new NotFoundException(
+          'No Streamystats data available for this item.',
+        );
+      }
+      if (result.status === 'ready') {
+        const data = result.data;
+        if (data.item.id !== id)
+          throw new ServiceUnavailableException(
+            'Streamystats returned a different media item.',
+          );
+        const serverId = await this.streamystats.getResolvedServerId();
+        details = {
+          ...streamystatsSummary(data),
+          externalUrl:
+            serverId !== null && serverId !== undefined
+              ? mediaAnalyticsUrl(this.settings.streamystats_url, [
+                  'servers',
+                  String(serverId),
+                  'library',
+                  id,
+                ])
+              : rootUrl,
+          averageCompletionPercent:
+            data.totalViews > 0 &&
+            Number.isFinite(data.completionRate) &&
+            data.completionRate >= 0 &&
+            data.completionRate <= 100
+              ? data.completionRate
+              : null,
+          users: data.usersWatched.map((row) => ({
+            id: row.user.id,
+            name: row.user.name ?? null,
+            playCount: row.watchCount,
+            totalWatchTimeMs: secondsToMilliseconds(row.totalWatchTime),
+            lastPlayedAt: row.lastWatched,
+          })),
+          episodes: data.episodeStats
+            ? {
+                playedEpisodes: data.episodeStats.watchedEpisodes,
+                totalEpisodes: data.episodeStats.totalEpisodes,
+                seasonsWithPlayback: data.episodeStats.watchedSeasons,
+              }
+            : null,
+        };
+      }
+    }
+    if (
+      generation !== this.generation ||
+      client !== (await this.assertSource(source))
+    ) {
+      throw new ServiceUnavailableException(
+        'Analytics settings changed. Please retry.',
+      );
+    }
+    return details;
   }
 
   async browse(
@@ -415,13 +553,7 @@ export class MediaAnalyticsService implements OnModuleDestroy {
       throw new ServiceUnavailableException(
         'Streamystats returned a different media item.',
       );
-    const milliseconds = result.data.totalWatchTime * 1000;
-    const summary: MediaPlaybackSummary = {
-      source,
-      playCount: result.data.totalViews,
-      totalWatchTimeMs: Number.isFinite(milliseconds) ? milliseconds : null,
-      lastPlayedAt: result.data.lastWatched,
-    };
+    const summary = streamystatsSummary(result.data);
     if (this.streamystats.api === client && this.generation === generation) {
       if (this.summaries.size >= MAX_ITEMS)
         this.summaries.delete(this.summaries.keys().next().value!);

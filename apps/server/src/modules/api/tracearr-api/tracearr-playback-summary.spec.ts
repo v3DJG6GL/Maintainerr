@@ -9,7 +9,10 @@ import {
   TracearrApiService,
   type TracearrHistoryIndex,
 } from './tracearr-api.service';
-import { summarizeTracearrPlayback } from './tracearr-playback-summary';
+import {
+  summarizeTracearrPlayback,
+  describeTracearrPlayback,
+} from './tracearr-playback-summary';
 
 const row = (
   id: string,
@@ -163,5 +166,130 @@ describe('Tracearr playback summaries', () => {
     expect(getMediaAnalyticsSortSource('streamystatsPlayCount')).toBe(
       'streamystats',
     );
+  });
+
+  it('shares deduplication and conservative unknown handling with detailed user stats', () => {
+    const first = row('a', {
+      media_type: 'movie',
+      rating_key: 'movie',
+      percent_complete: 20,
+      user: { id: 'user', username: 'Sample User' },
+    });
+    const second = row('b', {
+      media_type: 'movie',
+      rating_key: 'movie',
+      duration_ms: null,
+      percent_complete: null,
+    });
+    const result = describeTracearrPlayback(
+      indexOf([first, first, second]),
+      movie,
+    )?.details;
+    expect(result).toMatchObject({
+      playCount: 2,
+      totalWatchTimeMs: null,
+      averageCompletionPercent: null,
+      users: [
+        {
+          id: 'user',
+          name: 'Sample User',
+          playCount: 2,
+          totalWatchTimeMs: null,
+        },
+      ],
+    });
+  });
+
+  it('calculates per-play mean completion and keeps zero-history completion unknown', () => {
+    expect(
+      describeTracearrPlayback(
+        indexOf([
+          row('a', {
+            media_type: 'movie',
+            rating_key: 'movie',
+            percent_complete: 20,
+          }),
+          row('b', {
+            media_type: 'movie',
+            rating_key: 'movie',
+            percent_complete: 80,
+          }),
+        ]),
+        movie,
+      )?.details.averageCompletionPercent,
+    ).toBe(50);
+    expect(describeTracearrPlayback(indexOf([]), movie)?.details).toMatchObject(
+      { playCount: 0, users: [], averageCompletionPercent: null },
+    );
+    expect(
+      describeTracearrPlayback(indexOf([]), {
+        ...movie,
+        addedAt: new Date('2020-01-01'),
+      }),
+    ).toBeUndefined();
+  });
+
+  it('counts played episodes and seasons in the same scope and resolves only canonical show links', () => {
+    const showId = '00000000-0000-4000-8000-000000000001';
+    const episodeId = '00000000-0000-4000-8000-000000000002';
+    const index = indexOf([
+      row('a', { media_id: episodeId, show_media_id: showId }),
+      row('b', { media_id: episodeId, show_media_id: showId }),
+      row('c', {
+        rating_key: 'episode-two',
+        season_number: 1,
+        show_media_id: showId,
+      }),
+      row('other', {
+        rating_key: 'foreign',
+        grandparent_rating_key: 'other-show',
+      }),
+    ]);
+    const show = describeTracearrPlayback(
+      index,
+      createMediaItem({ type: 'show', id: 'show' }),
+    );
+    expect(show).toMatchObject({
+      mediaId: showId,
+      details: {
+        playCount: 3,
+        episodes: {
+          playedEpisodes: 2,
+          totalEpisodes: null,
+          seasonsWithPlayback: 2,
+        },
+      },
+    });
+    const season = describeTracearrPlayback(
+      index,
+      createMediaItem({ type: 'season', parentId: 'show', index: 0 }),
+    );
+    expect(season).toMatchObject({
+      mediaId: null,
+      details: {
+        playCount: 2,
+        episodes: { playedEpisodes: 1, seasonsWithPlayback: 1 },
+      },
+    });
+  });
+
+  it('does not choose arbitrarily between conflicting canonical media IDs', () => {
+    expect(
+      describeTracearrPlayback(
+        indexOf([
+          row('a', {
+            media_type: 'movie',
+            rating_key: 'movie',
+            media_id: '00000000-0000-4000-8000-000000000001',
+          }),
+          row('b', {
+            media_type: 'movie',
+            rating_key: 'movie',
+            media_id: '00000000-0000-4000-8000-000000000002',
+          }),
+        ]),
+        movie,
+      )?.mediaId,
+    ).toBeNull();
   });
 });

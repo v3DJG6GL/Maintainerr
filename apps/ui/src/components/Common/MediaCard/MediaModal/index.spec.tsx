@@ -756,6 +756,46 @@ describe('MediaModal', () => {
     expect(embyLogo.getAttribute('class')).toContain('object-contain')
   })
 
+  it('keeps configured Streamystats visible with a retry and root link when info is unavailable', async () => {
+    useMediaServerTypeMock.mockReturnValue({
+      mediaServerType: MediaServerType.JELLYFIN,
+      isLoading: false,
+      isPlex: false,
+      isJellyfin: true,
+      isEmby: false,
+      isMediaServerTypeSelected: true,
+      isSetupComplete: true,
+      isNotConfigured: false,
+    })
+    getApiHandlerMock.mockImplementation((path: string) => {
+      if (path === '/media-server') return Promise.resolve({})
+      if (path === '/settings')
+        return Promise.resolve({ streamystats_url: 'https://stats.test' })
+      if (path === '/media-server/meta/93')
+        return Promise.resolve({} as MediaItem)
+      return Promise.reject(new Error('Service unavailable'))
+    })
+    render(
+      <MediaModal
+        onClose={() => {}}
+        id={93}
+        mediaType="movie"
+        title="Sample Movie"
+        summary="Movie summary"
+      />,
+    )
+    await screen.findByText('Failed to load Streamystats data')
+    expect(
+      screen
+        .getByRole('link', { name: /View on Streamystats/ })
+        .getAttribute('href'),
+    ).toBe('https://stats.test/')
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
+    expect(getApiHandlerMock).toHaveBeenCalledWith(
+      '/media-analytics/items/93/details?source=streamystats',
+    )
+  })
+
   it('does not request Streamystats info when Jellyfin is not active', async () => {
     getApiHandlerMock.mockImplementation((path: string) => {
       if (path === '/media-server') {
