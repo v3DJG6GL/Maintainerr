@@ -42,6 +42,11 @@ msgstr ""
 msgid "[Image]"
 msgstr "[Imagen]"
 
+#. placeholder {0}: watchedSeasons ?? 0
+#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+msgid "{0, plural, one {# season with playback} other {# seasons with playback}}"
+msgstr ""
+
 #: src/components/StorageMetrics/index.tsx
 msgid "{accurateMountCount} of {mountCount} mounts report total capacity"
 msgstr "{accurateMountCount} de {mountCount} montajes informan la capacidad total"
@@ -320,12 +325,8 @@ msgid "{version} Changelog"
 msgstr "{version} Registro de cambios"
 
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
-msgid "{watchedEpisodes}/{totalEpisodes} episodes watched"
-msgstr "{watchedEpisodes}/{totalEpisodes} episodios vistos"
-
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
-msgid "{watchedSeasons}/{totalSeasons} seasons complete"
-msgstr "{watchedSeasons}/{totalSeasons} temporadas completas"
+msgid "{watchedEpisodes}/{totalEpisodes} episodes played"
+msgstr ""
 
 #: src/components/OverlayEditor/PropertiesPanel.tsx
 msgid "+ Text"
@@ -611,6 +612,14 @@ msgstr "Colecciones automáticas"
 msgid "Automatically sort items inside the collection on {mediaServerName}. Disabling later does not restore the default order - change it in {mediaServerName} if needed."
 msgstr "Ordena automáticamente los elementos dentro de la colección en {mediaServerName}. Deshabilitarlo más tarde no restaura el orden predeterminado; cámbialo en {mediaServerName} si es necesario."
 
+#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+msgid "Average completion"
+msgstr ""
+
+#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+msgid "Average completion of recorded playback sessions."
+msgstr ""
+
 #: src/components/OverlayEditor/PropertiesPanel.tsx
 msgid "Background"
 msgstr "Fondo"
@@ -843,10 +852,6 @@ msgstr "Reglas de la comunidad"
 #: src/components/Rules/Rule/RuleCreator/CommunityRuleUpload/index.tsx
 msgid "Community Short Name *"
 msgstr "Nombre corto de la comunidad *"
-
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
-msgid "Completion"
-msgstr "Progreso"
 
 #: src/components/StorageMetrics/index.tsx
 msgid "Compute library sizes"

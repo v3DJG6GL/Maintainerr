@@ -42,6 +42,11 @@ msgstr "(Next: {0})"
 msgid "[Image]"
 msgstr "[Image]"
 
+#. placeholder {0}: watchedSeasons ?? 0
+#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+msgid "{0, plural, one {# season with playback} other {# seasons with playback}}"
+msgstr "{0, plural, one {# season with playback} other {# seasons with playback}}"
+
 #: src/components/StorageMetrics/index.tsx
 msgid "{accurateMountCount} of {mountCount} mounts report total capacity"
 msgstr "{accurateMountCount} of {mountCount} mounts report total capacity"
@@ -320,12 +325,8 @@ msgid "{version} Changelog"
 msgstr "{version} Changelog"
 
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
-msgid "{watchedEpisodes}/{totalEpisodes} episodes watched"
-msgstr "{watchedEpisodes}/{totalEpisodes} episodes watched"
-
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
-msgid "{watchedSeasons}/{totalSeasons} seasons complete"
-msgstr "{watchedSeasons}/{totalSeasons} seasons complete"
+msgid "{watchedEpisodes}/{totalEpisodes} episodes played"
+msgstr "{watchedEpisodes}/{totalEpisodes} episodes played"
 
 #: src/components/OverlayEditor/PropertiesPanel.tsx
 msgid "+ Text"
@@ -611,6 +612,14 @@ msgstr "Automatic collections"
 msgid "Automatically sort items inside the collection on {mediaServerName}. Disabling later does not restore the default order - change it in {mediaServerName} if needed."
 msgstr "Automatically sort items inside the collection on {mediaServerName}. Disabling later does not restore the default order - change it in {mediaServerName} if needed."
 
+#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+msgid "Average completion"
+msgstr "Average completion"
+
+#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+msgid "Average completion of recorded playback sessions."
+msgstr "Average completion of recorded playback sessions."
+
 #: src/components/OverlayEditor/PropertiesPanel.tsx
 msgid "Background"
 msgstr "Background"
@@ -843,10 +852,6 @@ msgstr "Community Rules"
 #: src/components/Rules/Rule/RuleCreator/CommunityRuleUpload/index.tsx
 msgid "Community Short Name *"
 msgstr "Community Short Name *"
-
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
-msgid "Completion"
-msgstr "Completion"
 
 #: src/components/StorageMetrics/index.tsx
 msgid "Compute library sizes"

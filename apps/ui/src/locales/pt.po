@@ -42,6 +42,11 @@ msgstr ""
 msgid "[Image]"
 msgstr ""
 
+#. placeholder {0}: watchedSeasons ?? 0
+#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+msgid "{0, plural, one {# season with playback} other {# seasons with playback}}"
+msgstr ""
+
 #: src/components/StorageMetrics/index.tsx
 msgid "{accurateMountCount} of {mountCount} mounts report total capacity"
 msgstr ""
@@ -320,11 +325,7 @@ msgid "{version} Changelog"
 msgstr ""
 
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
-msgid "{watchedEpisodes}/{totalEpisodes} episodes watched"
-msgstr ""
-
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
-msgid "{watchedSeasons}/{totalSeasons} seasons complete"
+msgid "{watchedEpisodes}/{totalEpisodes} episodes played"
 msgstr ""
 
 #: src/components/OverlayEditor/PropertiesPanel.tsx
@@ -611,6 +612,14 @@ msgstr ""
 msgid "Automatically sort items inside the collection on {mediaServerName}. Disabling later does not restore the default order - change it in {mediaServerName} if needed."
 msgstr ""
 
+#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+msgid "Average completion"
+msgstr ""
+
+#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+msgid "Average completion of recorded playback sessions."
+msgstr ""
+
 #: src/components/OverlayEditor/PropertiesPanel.tsx
 msgid "Background"
 msgstr ""
@@ -842,10 +851,6 @@ msgstr ""
 
 #: src/components/Rules/Rule/RuleCreator/CommunityRuleUpload/index.tsx
 msgid "Community Short Name *"
-msgstr ""
-
-#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
-msgid "Completion"
 msgstr ""
 
 #: src/components/StorageMetrics/index.tsx

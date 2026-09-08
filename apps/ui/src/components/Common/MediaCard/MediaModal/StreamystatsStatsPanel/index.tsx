@@ -1,4 +1,4 @@
-import { Trans, useLingui } from '@lingui/react/macro'
+import { Plural, Trans, useLingui } from '@lingui/react/macro'
 import { useState } from 'react'
 import { useStreamystatsItemDetails } from '../../../../../api/streamystats'
 import BrandLink from '../../../BrandLink'
@@ -34,7 +34,7 @@ const StreamystatsStatsContent = ({
   itemId,
   itemUrl,
 }: StreamystatsStatsPanelProps) => {
-  const { i18n } = useLingui()
+  const { i18n, t } = useLingui()
   const query = useStreamystatsItemDetails(itemId, itemUrl)
   const [expanded, setExpanded] = useState(false)
   const data = query.data
@@ -45,7 +45,6 @@ const StreamystatsStatsContent = ({
   const watchedEpisodes = episodeStats?.watchedEpisodes
   const totalEpisodes = episodeStats?.totalEpisodes
   const watchedSeasons = episodeStats?.watchedSeasons
-  const totalSeasons = episodeStats?.totalSeasons
 
   return (
     <div className="mt-4 min-h-30 rounded-xl bg-zinc-900/70 p-3">
@@ -100,8 +99,11 @@ const StreamystatsStatsContent = ({
               </dd>
             </div>
             <div>
-              <dt className="text-xs tracking-wide text-zinc-100/60 uppercase">
-                <Trans>Completion</Trans>
+              <dt
+                className="text-xs tracking-wide text-zinc-100/60 uppercase"
+                title={t`Average completion of recorded playback sessions.`}
+              >
+                <Trans>Average completion</Trans>
               </dt>
               <dd className="font-medium">
                 {Math.round(data.completionRate)}%
@@ -120,12 +122,14 @@ const StreamystatsStatsContent = ({
           {episodeStats ? (
             <p className="text-xs text-zinc-100/60">
               <Trans>
-                {watchedEpisodes}/{totalEpisodes} episodes watched
+                {watchedEpisodes}/{totalEpisodes} episodes played
               </Trans>{' '}
               &middot;{' '}
-              <Trans>
-                {watchedSeasons}/{totalSeasons} seasons complete
-              </Trans>
+              <Plural
+                value={watchedSeasons ?? 0}
+                one="# season with playback"
+                other="# seasons with playback"
+              />
             </p>
           ) : null}
 

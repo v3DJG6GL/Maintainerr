@@ -108,6 +108,27 @@ describe('StreamystatsStatsPanel', () => {
     expect(screen.getByText('Next user 0')).toBeTruthy()
   })
 
+  it('labels session completion and avoids a misleading season completion ratio', async () => {
+    getApiHandler.mockResolvedValue({
+      ...detailsFor('Series'),
+      episodeStats: {
+        watchedSeasons: 3,
+        totalSeasons: 2,
+        watchedEpisodes: 4,
+        totalEpisodes: 10,
+      },
+    })
+    render(
+      <StreamystatsStatsPanel itemId="series" itemUrl="http://stats/series" />,
+    )
+    expect(await screen.findByText('Average completion')).toBeTruthy()
+    expect(
+      screen.getByText('3 seasons with playback', { exact: false }),
+    ).toBeTruthy()
+    expect(screen.getByText(/4\/10 episodes played/)).toBeTruthy()
+    expect(screen.queryByText(/3\/2 seasons/)).toBeNull()
+  })
+
   it('renders aggregate stats and per-user table on a valid response', async () => {
     getApiHandler.mockResolvedValue({
       item: { id: 'abc' },
