@@ -6,6 +6,7 @@ import {
   streamystatsWatchlistsResponseSchema,
 } from '@maintainerr/contracts';
 import { Injectable } from '@nestjs/common';
+import { isAxiosError } from 'axios';
 import { SettingsDataService } from '../../../modules/settings/settings-data.service';
 import {
   formatConnectionFailureMessage,
@@ -23,6 +24,11 @@ import {
   WATCHLIST_MEMBERSHIP_CACHE_KEY,
 } from './streamystats-api.constants';
 import { StreamystatsApi } from './helpers/streamystats-api.helper';
+
+export type StreamystatsItemDetailsResult =
+  | { status: 'ready'; data: StreamystatsItemDetails }
+  | { status: 'missing' }
+  | { status: 'unavailable' };
 
 interface StreamystatsVersionInfo {
   currentVersion: string;
@@ -49,6 +55,10 @@ export interface StreamystatsWatchlistMembership {
 export class StreamystatsApiService {
   api: StreamystatsApi | undefined;
   private resolvedServerId: number | null = null;
+  private readonly itemDetailsPromises = new Map<
+    string,
+    Promise<StreamystatsItemDetailsResult>
+  >();
 
   constructor(
     private readonly settings: SettingsDataService,
@@ -64,9 +74,8 @@ export class StreamystatsApiService {
     // after any settings change.
     this.api = undefined;
     this.resolvedServerId = null;
-    cacheManager
-      .getCache(STREAMYSTATS_CACHE_ID)
-      ?.data.del(WATCHLIST_MEMBERSHIP_CACHE_KEY);
+    this.itemDetailsPromises.clear();
+    cacheManager.getCache(STREAMYSTATS_CACHE_ID)?.data.flushAll();
 
     if (!this.settings.streamystats_url || !this.settings.jellyfin_api_key) {
       return;
@@ -96,44 +105,77 @@ export class StreamystatsApiService {
     }
   }
 
+  // Rule callers retain their existing fail-closed null contract. The HTTP
+  // controller uses the richer result so an outage is not displayed as empty.
   public async getItemDetails(
     itemId: string,
   ): Promise<StreamystatsItemDetails | null> {
-    // /api/get-item-details/[itemId] only accepts the internal Streamystats
-    // serverId (not serverName/serverUrl). Resolve it via /api/servers once
-    // and cache for subsequent calls.
+    const result = await this.getItemDetailsResult(itemId);
+    return result.status === 'ready' ? result.data : null;
+  }
+
+  public async getItemDetailsResult(
+    itemId: string,
+  ): Promise<StreamystatsItemDetailsResult> {
+    const api = this.api;
+    if (!api) return { status: 'unavailable' };
     const serverId = await this.resolveServerId();
-    if (serverId == null) {
-      this.logger.warn(
-        'Skipping Streamystats item details: could not resolve Streamystats serverId for the configured Jellyfin server.',
-      );
-      return null;
+    if (serverId == null || this.api !== api) {
+      return { status: 'unavailable' };
     }
 
-    try {
-      const raw = await this.api.get<unknown>(
-        `/api/get-item-details/${itemId}`,
-        {
-          params: { serverId: String(serverId) },
-        },
-      );
-      if (raw == null) {
-        return null;
-      }
+    const key = `item-details:${serverId}:${itemId}`;
+    const cache = cacheManager.getCache(STREAMYSTATS_CACHE_ID)?.data;
+    const cached = cache?.get<StreamystatsItemDetails>(key);
+    if (cached) return { status: 'ready', data: cached };
+    const pending = this.itemDetailsPromises.get(key);
+    if (pending !== undefined) return pending;
 
-      const parsed = streamystatsItemDetailsSchema.safeParse(raw);
+    const request = this.fetchItemDetails(api, serverId, itemId)
+      .then((result) => {
+        if (this.api !== api) return { status: 'unavailable' } as const;
+        if (result.status === 'ready') {
+          cache?.set(key, result.data, WATCHLIST_HTTP_TTL_S);
+        }
+        return result;
+      })
+      .finally(() => {
+        if (this.itemDetailsPromises.get(key) === request) {
+          this.itemDetailsPromises.delete(key);
+        }
+      });
+    this.itemDetailsPromises.set(key, request);
+    return request;
+  }
+
+  private async fetchItemDetails(
+    api: StreamystatsApi,
+    serverId: number,
+    itemId: string,
+  ): Promise<StreamystatsItemDetailsResult> {
+    try {
+      // The ordinary get() intentionally swallows HTTP failures. Read the raw
+      // response here to distinguish a missing item from an unavailable source.
+      const response = await api.getRawWithoutCache<unknown>(
+        `/api/get-item-details/${encodeURIComponent(itemId)}`,
+        { params: { serverId: String(serverId) } },
+      );
+      const parsed = streamystatsItemDetailsSchema.safeParse(response?.data);
       if (!parsed.success) {
         this.logger.warn(
           'Streamystats item details payload did not match expected schema',
         );
         this.logger.debug(parsed.error);
-        return null;
+        return { status: 'unavailable' };
       }
-      return parsed.data;
+      return { status: 'ready', data: parsed.data };
     } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 404) {
+        return { status: 'missing' };
+      }
       this.logger.log("Couldn't fetch Streamystats item details");
       this.logger.debug(error);
-      return null;
+      return { status: 'unavailable' };
     }
   }
 
@@ -275,19 +317,19 @@ export class StreamystatsApiService {
     if (this.resolvedServerId != null) {
       return this.resolvedServerId;
     }
-    if (!this.api) {
+    const api = this.api;
+    if (!api) {
       return null;
     }
 
+    const targetName = this.settings.jellyfin_server_name?.toLowerCase();
+    const targetUrl = this.settings.jellyfin_url?.replace(/\/+$/, '');
     try {
       const servers =
-        await this.api.getWithoutCache<StreamystatsServer[]>('/api/servers');
-      if (!Array.isArray(servers)) {
+        await api.getWithoutCache<StreamystatsServer[]>('/api/servers');
+      if (this.api !== api || !Array.isArray(servers)) {
         return null;
       }
-
-      const targetName = this.settings.jellyfin_server_name?.toLowerCase();
-      const targetUrl = this.settings.jellyfin_url?.replace(/\/+$/, '');
 
       // Match by URL first (more unique than name, which can collide).
       // Fall back to name only when no URL match exists.

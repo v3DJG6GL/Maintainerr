@@ -2692,6 +2692,10 @@ msgstr "Inga resultat"
 msgid "No scheduled actions"
 msgstr "Inga schemalagda åtgärder"
 
+#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+msgid "No Streamystats data available for this item."
+msgstr ""
+
 #: src/components/Common/MediaCard/MediaModal/index.tsx
 msgid "No summary available."
 msgstr "Ingen sammanfattning tillgänglig."
@@ -3274,6 +3278,7 @@ msgid "Retrieving servers..."
 msgstr "Hämtar servrar..."
 
 #: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
 msgid "Retry"
 msgstr ""
 

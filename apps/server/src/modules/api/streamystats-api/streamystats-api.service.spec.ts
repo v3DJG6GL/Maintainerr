@@ -21,6 +21,11 @@ describe('StreamystatsApiService', () => {
     apiMock.get.mockReset();
     apiMock.getWithoutCache.mockReset();
     apiMock.getRawWithoutCache.mockReset();
+    apiMock.getRawWithoutCache.mockImplementation(
+      async (...args: unknown[]) => ({
+        data: await apiMock.get(...args),
+      }),
+    );
 
     const { unit, unitRef } = await TestBed.solitary(
       StreamystatsApiService,
@@ -113,6 +118,30 @@ describe('StreamystatsApiService', () => {
       ]);
     });
 
+    it('does not cache server resolution from a previous client after settings change', async () => {
+      let resolveOld!: (servers: { id: number; name: string }[]) => void;
+      apiMock.getWithoutCache.mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveOld = resolve;
+        }),
+      );
+      const pending = service.getResolvedServerId();
+      Object.assign(settings, { streamystats_url: 'http://new-streamystats' });
+      service.init();
+      const newApi = {
+        getWithoutCache: jest
+          .fn()
+          .mockResolvedValue([{ id: 42, name: 'My Server' }]),
+      };
+      // The constructor mock normally reuses apiMock; use a distinct client,
+      // as production init() does, to exercise the in-flight identity guard.
+      service.api = newApi as unknown as StreamystatsApi;
+      resolveOld([{ id: 7, name: 'My Server' }]);
+      await expect(pending).resolves.toBeNull();
+      await expect(service.getResolvedServerId()).resolves.toBe(42);
+      expect(newApi.getWithoutCache).toHaveBeenCalledWith('/api/servers');
+    });
+
     it('returns null when no Streamystats server matches the configured Jellyfin', async () => {
       apiMock.getWithoutCache.mockResolvedValueOnce([
         { id: 99, url: 'http://other.local', name: 'Other Server' },
@@ -128,6 +157,30 @@ describe('StreamystatsApiService', () => {
 
       const result = await service.getItemDetails('item-1');
       expect(result).toBeNull();
+    });
+
+    it('distinguishes a confirmed 404 from an unavailable upstream', async () => {
+      apiMock.getRawWithoutCache.mockRejectedValueOnce({
+        isAxiosError: true,
+        response: { status: 404 },
+      });
+      await expect(service.getItemDetailsResult('missing')).resolves.toEqual({
+        status: 'missing',
+      });
+      apiMock.getRawWithoutCache.mockRejectedValueOnce({
+        isAxiosError: true,
+        response: { status: 503 },
+      });
+      await expect(
+        service.getItemDetailsResult('unavailable'),
+      ).resolves.toEqual({ status: 'unavailable' });
+    });
+
+    it('keeps invalid payloads unavailable rather than reporting no history', async () => {
+      apiMock.get.mockResolvedValue({ bogus: true });
+      await expect(service.getItemDetailsResult('invalid')).resolves.toEqual({
+        status: 'unavailable',
+      });
     });
 
     it('returns parsed details and passes the resolved serverId', async () => {

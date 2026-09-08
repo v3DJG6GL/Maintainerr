@@ -8,6 +8,7 @@ import {
   Get,
   NotFoundException,
   Param,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { SettingsDataService } from '../../settings/settings-data.service';
 import { StreamystatsApiService } from './streamystats-api.service';
@@ -44,14 +45,20 @@ export class StreamystatsApiController {
       throw new NotFoundException('Streamystats is not configured');
     }
 
-    const details = await this.streamystatsApiService.getItemDetails(itemId);
-    if (!details) {
+    const result =
+      await this.streamystatsApiService.getItemDetailsResult(itemId);
+    if (result.status === 'missing') {
       throw new NotFoundException(
         'No Streamystats data available for this item',
       );
     }
 
-    return details;
+    if (result.status === 'unavailable') {
+      throw new ServiceUnavailableException(
+        'Streamystats data could not be loaded',
+      );
+    }
+    return result.data;
   }
 
   private assertJellyfinActive(): void {

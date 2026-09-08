@@ -1,7 +1,5 @@
 import { Trans, useLingui } from '@lingui/react/macro'
-import type { StreamystatsItemDetails } from '@maintainerr/contracts'
-import { useEffect, useState } from 'react'
-import GetApiHandler from '../../../../../utils/ApiHandler'
+import { useStreamystatsItemDetails } from '../../../../../api/streamystats'
 import BrandLink from '../../../BrandLink'
 import { SmallLoadingSpinner } from '../../../LoadingSpinner'
 
@@ -9,12 +7,6 @@ interface StreamystatsStatsPanelProps {
   itemId: string
   itemUrl: string
 }
-
-type FetchState =
-  | { status: 'loading' }
-  | { status: 'ready'; data: StreamystatsItemDetails }
-  | { status: 'empty' }
-  | { status: 'error' }
 
 // The app locale, not the browser's - the labels beside these dates follow
 // the language picker, so the date format has to follow it too.
@@ -37,44 +29,16 @@ const formatWatchTime = (seconds: number): string => {
   return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`
 }
 
-const StreamystatsStatsPanel = ({
+const StreamystatsStatsContent = ({
   itemId,
   itemUrl,
 }: StreamystatsStatsPanelProps) => {
   const { i18n } = useLingui()
-  const [state, setState] = useState<FetchState>({ status: 'loading' })
-
-  useEffect(() => {
-    let active = true
-
-    GetApiHandler<StreamystatsItemDetails>(`/streamystats/items/${itemId}`)
-      .then((data) => {
-        if (!active) return
-        if (!data) {
-          setState({ status: 'empty' })
-          return
-        }
-        setState({ status: 'ready', data })
-      })
-      .catch((error: unknown) => {
-        if (!active) return
-        if (
-          error instanceof Error &&
-          /404|not found|no streamystats data/i.test(error.message)
-        ) {
-          setState({ status: 'empty' })
-          return
-        }
-        setState({ status: 'error' })
-      })
-
-    return () => {
-      active = false
-    }
-  }, [itemId])
+  const query = useStreamystatsItemDetails(itemId, itemUrl)
+  const data = query.data
 
   // Named locals so the counts reach the catalog as readable placeholders.
-  const episodeStats = state.status === 'ready' ? state.data.episodeStats : null
+  const episodeStats = data?.episodeStats
   const watchedEpisodes = episodeStats?.watchedEpisodes
   const totalEpisodes = episodeStats?.totalEpisodes
   const watchedSeasons = episodeStats?.watchedSeasons
@@ -89,33 +53,47 @@ const StreamystatsStatsPanel = ({
         </BrandLink>
       </div>
 
-      {state.status === 'loading' ? (
+      {query.isPending ? (
         <div className="mt-3 flex h-16 items-center">
           <SmallLoadingSpinner className="h-6 w-6" />
         </div>
-      ) : state.status === 'error' ? (
-        <p className="mt-2 text-sm text-error-400">
-          <Trans>Failed to load Streamystats data</Trans>
-        </p>
-      ) : state.status === 'empty' ? (
+      ) : query.isError ? (
+        <div className="mt-2 text-sm text-error-400">
+          <p>
+            <Trans>Failed to load Streamystats data</Trans>
+          </p>
+          <button
+            type="button"
+            className="mt-2 underline"
+            onClick={() => void query.refetch()}
+          >
+            <Trans>Retry</Trans>
+          </button>
+        </div>
+      ) : !data ? (
         <p className="mt-2 text-sm text-zinc-100/80">
-          <Trans>No watch history recorded yet.</Trans>
+          <Trans>No Streamystats data available for this item.</Trans>
         </p>
       ) : (
         <div className="mt-2 space-y-3 text-sm text-zinc-100">
+          {data.totalViews === 0 ? (
+            <p className="text-zinc-100/80">
+              <Trans>No watch history recorded yet.</Trans>
+            </p>
+          ) : null}
           <dl className="grid grid-cols-3 gap-3">
             <div>
               <dt className="text-xs tracking-wide text-zinc-100/60 uppercase">
                 <Trans>Plays</Trans>
               </dt>
-              <dd className="font-medium">{state.data.totalViews}</dd>
+              <dd className="font-medium">{data.totalViews}</dd>
             </div>
             <div>
               <dt className="text-xs tracking-wide text-zinc-100/60 uppercase">
                 <Trans>Completion</Trans>
               </dt>
               <dd className="font-medium">
-                {Math.round(state.data.completionRate)}%
+                {Math.round(data.completionRate)}%
               </dd>
             </div>
             <div>
@@ -123,7 +101,7 @@ const StreamystatsStatsPanel = ({
                 <Trans>Last watched</Trans>
               </dt>
               <dd className="font-medium">
-                {formatDate(state.data.lastWatched, i18n.locale)}
+                {formatDate(data.lastWatched, i18n.locale)}
               </dd>
             </div>
           </dl>
@@ -140,7 +118,7 @@ const StreamystatsStatsPanel = ({
             </p>
           ) : null}
 
-          {state.data.usersWatched.length > 0 ? (
+          {data.usersWatched.length > 0 ? (
             <div className="overflow-hidden rounded-lg border border-zinc-700/50">
               <table className="w-full text-left text-xs">
                 <thead className="bg-zinc-800/60 text-zinc-100">
@@ -160,7 +138,7 @@ const StreamystatsStatsPanel = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {state.data.usersWatched.slice(0, 5).map((row) => (
+                  {data.usersWatched.slice(0, 5).map((row) => (
                     <tr
                       key={row.user.id}
                       className="border-t border-zinc-700/50"
@@ -186,5 +164,12 @@ const StreamystatsStatsPanel = ({
     </div>
   )
 }
+
+const StreamystatsStatsPanel = (props: StreamystatsStatsPanelProps) => (
+  <StreamystatsStatsContent
+    key={`${props.itemUrl}:${props.itemId}`}
+    {...props}
+  />
+)
 
 export default StreamystatsStatsPanel
