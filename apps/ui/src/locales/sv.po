@@ -1744,6 +1744,10 @@ msgstr "Servrarna kunde inte läsas in - tryck på uppdatera för att försöka 
 msgid "Failed to load Streamystats data"
 msgstr "Streamystats-data kunde inte läsas in"
 
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
+msgid "Failed to load Tracearr data"
+msgstr ""
+
 #: src/components/Collection/CollectionDetail/PostponeButton/index.tsx
 msgid "Failed to postpone the deletion for this item."
 msgstr "Raderingen av det här objektet kunde inte skjutas upp."
@@ -2058,6 +2062,10 @@ msgstr "Under de kommande"
 msgid "Inactive"
 msgstr "Inaktiv"
 
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
+msgid "Includes recorded plays that were not completed."
+msgstr ""
+
 #: src/components/Common/CommunityRuleModal/index.tsx
 #: src/components/Settings/Logs/index.tsx
 #: src/pages/CollectionDetailPage.tsx
@@ -2189,6 +2197,10 @@ msgstr "Största samlingarna"
 #: src/components/Collection/CollectionDetail/CollectionInfo/index.tsx
 msgid "Last duration"
 msgstr "Senaste körtid"
+
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
+msgid "Last played"
+msgstr ""
 
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
 msgid "Last watched"
@@ -2725,11 +2737,16 @@ msgstr ""
 msgid "No summary available."
 msgstr "Ingen sammanfattning tillgänglig."
 
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
+msgid "No Tracearr data available for this item."
+msgstr ""
+
 #: src/components/Rules/Rule/RuleCreator/RuleInput/index.tsx
 msgid "No users reported by the media server"
 msgstr "Inga användare rapporterade av mediaservern"
 
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
 msgid "No watch history recorded yet."
 msgstr "Ingen visningshistorik registrerad ännu."
 
@@ -2954,6 +2971,7 @@ msgid "Path unavailable"
 msgstr ""
 
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
 msgid "Plays"
 msgstr "Uppspelningar"
 
@@ -3322,6 +3340,7 @@ msgstr "Hämtar servrar..."
 
 #: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
 #: src/components/Common/MediaLibrarySortControl.tsx
 msgid "Retry"
 msgstr ""
@@ -4352,6 +4371,7 @@ msgid "Total size not reported by this instance - only free space is accurate."
 msgstr "Total storlek rapporteras inte av den här instansen - endast ledigt utrymme är tillförlitligt."
 
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
 msgid "Total watch time"
 msgstr ""
 

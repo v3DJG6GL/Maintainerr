@@ -1744,6 +1744,10 @@ msgstr ""
 msgid "Failed to load Streamystats data"
 msgstr ""
 
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
+msgid "Failed to load Tracearr data"
+msgstr ""
+
 #: src/components/Collection/CollectionDetail/PostponeButton/index.tsx
 msgid "Failed to postpone the deletion for this item."
 msgstr ""
@@ -2058,6 +2062,10 @@ msgstr ""
 msgid "Inactive"
 msgstr ""
 
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
+msgid "Includes recorded plays that were not completed."
+msgstr ""
+
 #: src/components/Common/CommunityRuleModal/index.tsx
 #: src/components/Settings/Logs/index.tsx
 #: src/pages/CollectionDetailPage.tsx
@@ -2188,6 +2196,10 @@ msgstr ""
 
 #: src/components/Collection/CollectionDetail/CollectionInfo/index.tsx
 msgid "Last duration"
+msgstr ""
+
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
+msgid "Last played"
 msgstr ""
 
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
@@ -2725,11 +2737,16 @@ msgstr ""
 msgid "No summary available."
 msgstr ""
 
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
+msgid "No Tracearr data available for this item."
+msgstr ""
+
 #: src/components/Rules/Rule/RuleCreator/RuleInput/index.tsx
 msgid "No users reported by the media server"
 msgstr ""
 
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
 msgid "No watch history recorded yet."
 msgstr ""
 
@@ -2954,6 +2971,7 @@ msgid "Path unavailable"
 msgstr ""
 
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
 msgid "Plays"
 msgstr ""
 
@@ -3322,6 +3340,7 @@ msgstr ""
 
 #: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
 #: src/components/Common/MediaLibrarySortControl.tsx
 msgid "Retry"
 msgstr ""
@@ -4352,6 +4371,7 @@ msgid "Total size not reported by this instance - only free space is accurate."
 msgstr ""
 
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
 msgid "Total watch time"
 msgstr ""
 

@@ -1744,6 +1744,10 @@ msgstr "Failed to load servers - press refresh to retry"
 msgid "Failed to load Streamystats data"
 msgstr "Failed to load Streamystats data"
 
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
+msgid "Failed to load Tracearr data"
+msgstr "Failed to load Tracearr data"
+
 #: src/components/Collection/CollectionDetail/PostponeButton/index.tsx
 msgid "Failed to postpone the deletion for this item."
 msgstr "Failed to postpone the deletion for this item."
@@ -2058,6 +2062,10 @@ msgstr "In Next"
 msgid "Inactive"
 msgstr "Inactive"
 
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
+msgid "Includes recorded plays that were not completed."
+msgstr "Includes recorded plays that were not completed."
+
 #: src/components/Common/CommunityRuleModal/index.tsx
 #: src/components/Settings/Logs/index.tsx
 #: src/pages/CollectionDetailPage.tsx
@@ -2189,6 +2197,10 @@ msgstr "Largest collections"
 #: src/components/Collection/CollectionDetail/CollectionInfo/index.tsx
 msgid "Last duration"
 msgstr "Last duration"
+
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
+msgid "Last played"
+msgstr "Last played"
 
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
 msgid "Last watched"
@@ -2725,11 +2737,16 @@ msgstr "No Streamystats data available for this item."
 msgid "No summary available."
 msgstr "No summary available."
 
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
+msgid "No Tracearr data available for this item."
+msgstr "No Tracearr data available for this item."
+
 #: src/components/Rules/Rule/RuleCreator/RuleInput/index.tsx
 msgid "No users reported by the media server"
 msgstr "No users reported by the media server"
 
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
 msgid "No watch history recorded yet."
 msgstr "No watch history recorded yet."
 
@@ -2954,6 +2971,7 @@ msgid "Path unavailable"
 msgstr "Path unavailable"
 
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
 msgid "Plays"
 msgstr "Plays"
 
@@ -3322,6 +3340,7 @@ msgstr "Retrieving servers..."
 
 #: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
 #: src/components/Common/MediaLibrarySortControl.tsx
 msgid "Retry"
 msgstr "Retry"
@@ -4352,6 +4371,7 @@ msgid "Total size not reported by this instance - only free space is accurate."
 msgstr "Total size not reported by this instance - only free space is accurate."
 
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+#: src/components/Common/MediaCard/MediaModal/TracearrDetails.tsx
 msgid "Total watch time"
 msgstr "Total watch time"
 

@@ -25,6 +25,7 @@ import Button from '../../Button'
 import LoadingSpinner from '../../LoadingSpinner'
 import StreamystatsStatsPanel from './StreamystatsStatsPanel'
 import MediaStoragePanel from './MediaStoragePanel'
+import TracearrDetails from './TracearrDetails'
 import {
   emptyMaintainerrMediaStatusDetails,
   getMaintainerrStatusDetailsKey,
@@ -216,6 +217,7 @@ const MediaModalContent: React.FC<ModalContentProps> = memo(
     const [streamystatsItemUrl, setStreamystatsItemUrl] = useState<
       string | null
     >(null)
+    const [tracearrSource, setTracearrSource] = useState<string | null>(null)
     const [metadata, setMetadata] = useState<MediaItem | null>(null)
     const [seerrConfigured, setSeerrConfigured] = useState<boolean>(false)
     // Keyed by the path it was fetched for, like the backdrop below, so a
@@ -420,6 +422,11 @@ const MediaModalContent: React.FC<ModalContentProps> = memo(
           if (!active) return
           setTautulliModalUrl(resp?.tautulli_url || null)
           setSeerrConfigured(!!resp?.seerr_url)
+          setTracearrSource(
+            resp?.tracearr_url && resp?.tracearr_api_key
+              ? `${resp.tracearr_url}:${resp.tracearr_server_id ?? 'auto'}`
+              : null,
+          )
         })
         .catch(() => {})
       // Streamystats is Jellyfin-only (Emby is unsupported upstream), so only
@@ -830,6 +837,13 @@ const MediaModalContent: React.FC<ModalContentProps> = memo(
             ) : null}
 
             <MediaStoragePanel itemId={String(id)} serverId={machineId} />
+
+            {tracearrSource && machineId ? (
+              <TracearrDetails
+                itemId={String(id)}
+                sourceKey={`${tracearrSource}:${machineId}`}
+              />
+            ) : null}
 
             {isJellyfin && streamystatsItemUrl ? (
               <StreamystatsStatsPanel
