@@ -4,9 +4,11 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  ParseEnumPipe,
   Query,
 } from '@nestjs/common';
 import { SeerrApiService } from './seerr-api.service';
+import { SeerrMediaType } from './seerr-watchlist';
 
 @Controller(['api/seerr', 'api/overseerr', 'api/jellyseerr'])
 export class SeerrApiController {
@@ -21,9 +23,11 @@ export class SeerrApiController {
   @Get('requests/:tmdbId/users')
   getRequestedByUsernames(
     @Param('tmdbId', ParseIntPipe) tmdbId: number,
+    @Query('mediaType', new ParseEnumPipe({ movie: 'movie', tv: 'tv' }))
+    mediaType: SeerrMediaType,
     @Query('season', new ParseIntPipe({ optional: true })) season?: number,
   ): Promise<string[]> {
-    return this.seerrApi.getRequestedByUsernames(tmdbId, season);
+    return this.seerrApi.getRequestedByUsernames(tmdbId, mediaType, season);
   }
 
   @Get('show/:id')

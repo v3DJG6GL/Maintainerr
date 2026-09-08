@@ -115,6 +115,7 @@ function buildRequests() {
     const available = index % 2 === 0;
     const media = {
       id: 1000 + index,
+      mediaType: isShow ? 'tv' : 'movie',
       tmdbId,
       tvdbId: isShow ? 800000 + index : 0,
       status: available ? MEDIA_AVAILABLE : MEDIA_PROCESSING,

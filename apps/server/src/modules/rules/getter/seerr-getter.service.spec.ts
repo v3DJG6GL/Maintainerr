@@ -127,6 +127,23 @@ describe('SeerrGetterService', () => {
   // The id-resolution (media item -> tmdb) preceding every Seerr query ran once
   // per rule condition; the run-scoped ArrLookupCache now memoizes it so it runs
   // once per item (#3285). Mirrors the Radarr/Sonarr candidate memo.
+  it('passes explicit media type to the request index for movies and whole shows', async () => {
+    const { service, seerrApi } = createService();
+    seerrApi.getRequestsForMedia.mockResolvedValue([]);
+    await service.get(IS_REQUESTED_PROP_ID, movieLibItem);
+    await service.get(IS_REQUESTED_PROP_ID, showLibItem);
+    expect(seerrApi.getRequestsForMedia).toHaveBeenNthCalledWith(
+      1,
+      12345,
+      'movie',
+    );
+    expect(seerrApi.getRequestsForMedia).toHaveBeenNthCalledWith(
+      2,
+      12345,
+      'tv',
+    );
+  });
+
   describe('id-resolution memoization (#3285)', () => {
     const call = (
       service: SeerrGetterService,

@@ -19,6 +19,7 @@ import {
   SEERR_REQUESTS_PAGE_SIZE,
 } from './seerr-api.constants';
 import { SeerrApi } from './helpers/seerr-api.helper';
+import { seerrMediaKey, SeerrMediaType } from './seerr-watchlist';
 
 interface SeerrMediaInfo {
   id: number;
@@ -206,7 +207,7 @@ export class SeerrApiService {
   // Deduplicates concurrent callers (the first batch of rule-evaluation items)
   // onto a single /request sweep while the run-scoped index is being built.
   private requestIndexPromise?: Promise<
-    Map<number, SeerrRequest[]> | undefined
+    Map<string, SeerrRequest[]> | undefined
   >;
 
   constructor(
@@ -221,6 +222,9 @@ export class SeerrApiService {
     // Drop the previous client first, so removing Seerr from settings stops
     // the app querying it rather than leaving the old one live until restart.
     this.api = undefined;
+    this.requestIndexPromise = undefined;
+    cacheManager.getCache(SEERR_REQUESTS_CACHE_ID).data.flushAll();
+    cacheManager.getCache('seerr').data.flushAll();
 
     if (!this.settings.seerr_url) {
       return;
@@ -342,6 +346,8 @@ export class SeerrApiService {
    * items). `[]` therefore means "Seerr reachable, no requests".
    */
   public async getRequests(): Promise<SeerrRequest[] | undefined> {
+    // Keep every page on the same instance if settings change mid-sweep.
+    const api = this.api;
     try {
       const size = SEERR_REQUESTS_PAGE_SIZE;
       let hasNext = true;
@@ -363,7 +369,7 @@ export class SeerrApiService {
         // anything else falls back to the default `request.id DESC`), so we omit
         // `sort` and let buildRequestIndex normalise ordering instead of relying
         // on the sweep order. `filter=all` keeps every request status.
-        const resp = await this.api.getWithoutCache<SeerrRequestPageResponse>(
+        const resp = await api.getWithoutCache<SeerrRequestPageResponse>(
           `/request?take=${size}&skip=${skip}&filter=all`,
         );
 
@@ -414,12 +420,13 @@ export class SeerrApiService {
    */
   public async getRequestsForMedia(
     tmdbId: number,
+    mediaType: SeerrMediaType,
   ): Promise<SeerrRequest[] | undefined> {
     const index = await this.getRequestIndex();
     if (index === undefined) {
       return undefined;
     }
-    const requests = index.get(tmdbId);
+    const requests = index.get(seerrMediaKey(mediaType, tmdbId));
     // cloneDeep, not structuredClone: it never throws on an unexpected
     // non-cloneable value (which would surface as a per-item warn + skip).
     return requests ? cloneDeep(requests) : [];
@@ -430,18 +437,19 @@ export class SeerrApiService {
    * contract, an unreachable Seerr yields `[]` rather than `undefined`: failing
    * to name the requester must never suppress the pre-deletion warning itself.
    *
-   * `season` is required for TV, since Seerr tracks requests per season -
-   * without it a season-level item credits whoever requested a different season.
+   * `season` narrows a season/episode lookup; omit it only for a whole title.
+   * `mediaType` is always required because movie and TV TMDB IDs can overlap.
    */
   public async getRequestedByUsernames(
     tmdbId: number,
+    mediaType: SeerrMediaType,
     season?: number,
   ): Promise<string[]> {
     if (!this.isConfigured() || !tmdbId) {
       return [];
     }
 
-    const requests = await this.getRequestsForMedia(tmdbId);
+    const requests = await this.getRequestsForMedia(tmdbId, mediaType);
     if (!requests?.length) {
       return [];
     }
@@ -460,10 +468,10 @@ export class SeerrApiService {
   }
 
   private async getRequestIndex(): Promise<
-    Map<number, SeerrRequest[]> | undefined
+    Map<string, SeerrRequest[]> | undefined
   > {
     const cache = cacheManager.getCache(SEERR_REQUESTS_CACHE_ID)?.data;
-    const cached = cache?.get<Map<number, SeerrRequest[]>>(
+    const cached = cache?.get<Map<string, SeerrRequest[]>>(
       SEERR_REQUESTS_CACHE_KEY,
     );
     if (cached) {
@@ -471,19 +479,24 @@ export class SeerrApiService {
     }
 
     // Collapse the first concurrent batch of callers onto one sweep.
-    this.requestIndexPromise ??= this.buildRequestIndex().finally(() => {
-      this.requestIndexPromise = undefined;
-    });
+    if (this.requestIndexPromise === undefined) {
+      const pending = this.buildRequestIndex().finally(() => {
+        if (this.requestIndexPromise === pending)
+          this.requestIndexPromise = undefined;
+      });
+      this.requestIndexPromise = pending;
+    }
     return this.requestIndexPromise;
   }
 
   private async buildRequestIndex(): Promise<
-    Map<number, SeerrRequest[]> | undefined
+    Map<string, SeerrRequest[]> | undefined
   > {
+    const api = this.api;
     const requests = await this.getRequests();
     // Don't cache a failed sweep: a later batch in the same run retries, giving
     // a transient Seerr blip a chance to recover instead of poisoning the run.
-    if (requests === undefined) {
+    if (requests === undefined || api !== this.api) {
       return undefined;
     }
 
@@ -498,24 +511,31 @@ export class SeerrApiService {
         a.id - b.id,
     );
 
-    // Group by media.tmdbId: Seerr keys every media row by tmdbId (non-null,
-    // indexed - tvdbId/imdbId are optional extras), and the metadata service
-    // resolves each library item to that tmdbId via all its providers (with
-    // tvdb/imdb -> tmdb bridging), so tmdbId is the canonical join key (and
-    // matches the per-item getMovie/getShow path this replaces). media.requests
-    // is not populated on the list endpoint (it would be circular), so each
-    // title's request set is rebuilt here.
-    const index = new Map<number, SeerrRequest[]>();
+    // Movie and TV TMDB IDs have separate namespaces. Preserve both parts of
+    // the identity for every request-derived rule and notification consumer.
+    const index = new Map<string, SeerrRequest[]>();
     for (const request of requests) {
       const tmdbId = request.media?.tmdbId;
-      if (typeof tmdbId !== 'number') {
-        continue;
+      if (
+        typeof tmdbId !== 'number' ||
+        !Number.isInteger(tmdbId) ||
+        tmdbId <= 0
+      ) {
+        return undefined;
       }
-      const existing = index.get(tmdbId);
+      const mediaType = request.media.mediaType;
+      if (
+        (mediaType !== 'movie' && mediaType !== 'tv') ||
+        request.type !== mediaType
+      ) {
+        return undefined;
+      }
+      const key = seerrMediaKey(mediaType, tmdbId);
+      const existing = index.get(key);
       if (existing) {
         existing.push(request);
       } else {
-        index.set(tmdbId, [request]);
+        index.set(key, [request]);
       }
     }
 

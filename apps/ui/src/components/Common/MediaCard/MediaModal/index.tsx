@@ -287,7 +287,7 @@ const MediaModalContent: React.FC<ModalContentProps> = memo(
     // the show's other requesters get credited here too.
     const seerrRequestersPath = useMemo(() => {
       const tmdbId = providerIds?.tmdb?.[0]
-      if (!seerrConfigured || !tmdbId) {
+      if (!seerrConfigured || !tmdbId || !metadata?.type) {
         return null
       }
 
@@ -298,8 +298,9 @@ const MediaModalContent: React.FC<ModalContentProps> = memo(
             ? metadata.parentIndex
             : undefined
 
-      const base = `/seerr/requests/${tmdbId}/users`
-      return season != null ? `${base}?season=${season}` : base
+      const mediaType = metadata.type === 'movie' ? 'movie' : 'tv'
+      const base = `/seerr/requests/${tmdbId}/users?mediaType=${mediaType}`
+      return season != null ? `${base}&season=${season}` : base
     }, [seerrConfigured, providerIds, metadata])
 
     const requestedBy =

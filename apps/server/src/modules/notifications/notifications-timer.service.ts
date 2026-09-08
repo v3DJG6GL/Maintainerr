@@ -133,7 +133,7 @@ export class NotificationTimerService extends TaskBase {
     media: CollectionMedia,
     metadata: MediaItem | undefined,
   ): Promise<string[]> {
-    if (!media.tmdbId) {
+    if (!media.tmdbId || !metadata?.type) {
       return [];
     }
 
@@ -146,6 +146,10 @@ export class NotificationTimerService extends TaskBase {
           ? metadata.parentIndex
           : undefined;
 
-    return this.seerrApi.getRequestedByUsernames(media.tmdbId, season);
+    return this.seerrApi.getRequestedByUsernames(
+      media.tmdbId,
+      metadata.type === 'movie' ? 'movie' : 'tv',
+      season,
+    );
   }
 }

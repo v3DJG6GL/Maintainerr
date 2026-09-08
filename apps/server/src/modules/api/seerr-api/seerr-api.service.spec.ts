@@ -1,8 +1,13 @@
 import { Mocked, TestBed } from '@suites/unit';
+import { createMockLogger } from '../../../../test/utils/data';
 import { MaintainerrLoggerFactory } from '../../logging/logs.service';
 import { SettingsDataService } from '../../settings/settings-data.service';
 import cacheManager from '../lib/cache';
-import { SEERR_REQUESTS_CACHE_ID } from './seerr-api.constants';
+import {
+  SEERR_REQUESTS_CACHE_ID,
+  SEERR_REQUESTS_CACHE_KEY,
+} from './seerr-api.constants';
+import { SeerrApi } from './helpers/seerr-api.helper';
 import {
   SeerrApiService,
   SeerrRequest,
@@ -21,6 +26,11 @@ describe('SeerrApiService', () => {
       SettingsDataService,
     ) as unknown as Mocked<SettingsDataService>;
     settings.seerrConfigured.mockReturnValue(true);
+    settings.seerr_url = 'http://seerr.local';
+    settings.seerr_api_key = 'test-key';
+    unitRef
+      .get(MaintainerrLoggerFactory)
+      .createLogger.mockReturnValue(createMockLogger());
   });
 
   it('should return false when no other requested seasons remain', async () => {
@@ -233,6 +243,7 @@ describe('SeerrApiService', () => {
       profileId: 1,
       rootFolder: '/',
       media: {
+        mediaType: 'movie',
         id: tmdbId,
         tmdbId,
         tvdbId: 0,
@@ -407,18 +418,24 @@ describe('SeerrApiService', () => {
         );
       (service as unknown as { api: unknown }).api = { getWithoutCache };
 
-      await expect(service.getRequestsForMedia(100)).resolves.toHaveLength(2);
-      await expect(service.getRequestsForMedia(200)).resolves.toHaveLength(1);
-      await expect(service.getRequestsForMedia(999)).resolves.toEqual([]);
+      await expect(
+        service.getRequestsForMedia(100, 'movie'),
+      ).resolves.toHaveLength(2);
+      await expect(
+        service.getRequestsForMedia(200, 'movie'),
+      ).resolves.toHaveLength(1);
+      await expect(service.getRequestsForMedia(999, 'movie')).resolves.toEqual(
+        [],
+      );
       // One sweep total - later lookups are served from the cached index.
       expect(getWithoutCache).toHaveBeenCalledTimes(1);
 
       // Returned values are deep copies: neither reshaping the array nor
       // mutating a request object may corrupt the cached index.
-      const copy = await service.getRequestsForMedia(100);
+      const copy = await service.getRequestsForMedia(100, 'movie');
       copy.push(requestWithTmdb(99, 100));
       copy[0].media.tmdbId = -1;
-      const fresh = await service.getRequestsForMedia(100);
+      const fresh = await service.getRequestsForMedia(100, 'movie');
       expect(fresh).toHaveLength(2);
       expect(fresh[0].media.tmdbId).toBe(100);
     });
@@ -441,7 +458,7 @@ describe('SeerrApiService', () => {
         );
       (service as unknown as { api: unknown }).api = { getWithoutCache };
 
-      const requests = await service.getRequestsForMedia(100);
+      const requests = await service.getRequestsForMedia(100, 'movie');
       expect(requests?.map((r) => r.createdAt)).toEqual([
         '2026-01-01',
         '2026-02-01',
@@ -449,7 +466,7 @@ describe('SeerrApiService', () => {
       ]);
     });
 
-    it('skips requests whose media.tmdbId is not a number', async () => {
+    it('rejects an incomplete index when a request cannot be identified', async () => {
       const noTmdb = requestWithTmdb(2, 100);
       (noTmdb.media as { tmdbId?: number }).tmdbId = undefined;
       const getWithoutCache = jest
@@ -457,7 +474,9 @@ describe('SeerrApiService', () => {
         .mockResolvedValue(page([requestWithTmdb(1, 100), noTmdb], 1, 1));
       (service as unknown as { api: unknown }).api = { getWithoutCache };
 
-      await expect(service.getRequestsForMedia(100)).resolves.toHaveLength(1);
+      await expect(
+        service.getRequestsForMedia(100, 'movie'),
+      ).resolves.toBeUndefined();
     });
 
     it('builds the index once for a concurrent first batch (in-flight dedup)', async () => {
@@ -471,10 +490,10 @@ describe('SeerrApiService', () => {
       (service as unknown as { api: unknown }).api = { getWithoutCache };
 
       const batch = Promise.all([
-        service.getRequestsForMedia(100),
-        service.getRequestsForMedia(200),
-        service.getRequestsForMedia(300),
-        service.getRequestsForMedia(400),
+        service.getRequestsForMedia(100, 'movie'),
+        service.getRequestsForMedia(200, 'movie'),
+        service.getRequestsForMedia(300, 'movie'),
+        service.getRequestsForMedia(400, 'movie'),
       ]);
       resolveSweep(page([requestWithTmdb(1, 100)], 1, 1));
       const [r100, r200] = await batch;
@@ -489,15 +508,65 @@ describe('SeerrApiService', () => {
       const getWithoutCache = jest.fn().mockResolvedValueOnce(undefined);
       (service as unknown as { api: unknown }).api = { getWithoutCache };
 
-      await expect(service.getRequestsForMedia(100)).resolves.toBeUndefined();
+      await expect(
+        service.getRequestsForMedia(100, 'movie'),
+      ).resolves.toBeUndefined();
 
       // The failed sweep is not cached, so a later batch retries and recovers.
       getWithoutCache.mockResolvedValueOnce(
         page([requestWithTmdb(1, 100)], 1, 1),
       );
-      await expect(service.getRequestsForMedia(100)).resolves.toHaveLength(1);
+      await expect(
+        service.getRequestsForMedia(100, 'movie'),
+      ).resolves.toHaveLength(1);
       expect(getWithoutCache).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it('keeps movie and TV requests with the same TMDB ID separate', async () => {
+    cacheManager.getCache(SEERR_REQUESTS_CACHE_ID)?.data.flushAll();
+    const movie = requestWithTmdb(1, 100);
+    const tv = {
+      ...requestWithTmdb(2, 100),
+      type: 'tv',
+      media: { ...movie.media, mediaType: 'tv' },
+      seasons: [],
+    } as SeerrRequest;
+    jest.spyOn(service, 'getRequests').mockResolvedValue([movie, tv]);
+    await expect(service.getRequestsForMedia(100, 'movie')).resolves.toEqual([
+      movie,
+    ]);
+    await expect(service.getRequestsForMedia(100, 'tv')).resolves.toEqual([tv]);
+  });
+
+  it('discards old request sweeps without clearing a newer in-flight index', async () => {
+    cacheManager.getCache(SEERR_REQUESTS_CACHE_ID).data.flushAll();
+    let resolveOld: (value: unknown) => void;
+    let resolveNew: (value: unknown) => void;
+    const oldGet = jest.fn().mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveOld = resolve;
+        }),
+    );
+    service.api = { getWithoutCache: oldGet } as unknown as SeerrApi;
+    const old = service.getRequestsForMedia(100, 'movie');
+    service.init();
+    const newGet = jest.fn().mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveNew = resolve;
+        }),
+    );
+    service.api = { getWithoutCache: newGet } as unknown as SeerrApi;
+    const next = service.getRequestsForMedia(100, 'movie');
+    resolveOld(page([requestWithTmdb(1, 100)], 1, 1));
+    await expect(old).resolves.toBeUndefined();
+    const concurrent = service.getRequestsForMedia(100, 'movie');
+    expect(newGet).toHaveBeenCalledTimes(1);
+    resolveNew(page([requestWithTmdb(2, 100)], 1, 1));
+    expect((await next)?.map((request) => request.id)).toEqual([2]);
+    expect((await concurrent)?.map((request) => request.id)).toEqual([2]);
   });
 
   describe('getRequestedByUsernames', () => {
@@ -530,11 +599,9 @@ describe('SeerrApiService', () => {
         requestedBy(4, { plexUsername: 'alice', username: 'alice-local' }),
       ]);
 
-      await expect(service.getRequestedByUsernames(100)).resolves.toEqual([
-        'alice',
-        'bob',
-        'carol',
-      ]);
+      await expect(
+        service.getRequestedByUsernames(100, 'movie'),
+      ).resolves.toEqual(['alice', 'bob', 'carol']);
     });
 
     it('credits only the users who requested the given season', async () => {
@@ -546,30 +613,31 @@ describe('SeerrApiService', () => {
           requestedBy(3, { plexUsername: 'carol' }, [2, 3]),
         ]);
 
-      await expect(service.getRequestedByUsernames(100, 2)).resolves.toEqual([
-        'bob',
-        'carol',
-      ]);
+      await expect(
+        service.getRequestedByUsernames(100, 'tv', 2),
+      ).resolves.toEqual(['bob', 'carol']);
       // Without a season, every requester of the show is credited.
-      await expect(service.getRequestedByUsernames(100)).resolves.toEqual([
-        'alice',
-        'bob',
-        'carol',
-      ]);
+      await expect(service.getRequestedByUsernames(100, 'tv')).resolves.toEqual(
+        ['alice', 'bob', 'carol'],
+      );
     });
 
     it('returns [] when Seerr is unreachable, so the notification still sends', async () => {
       // The opposite of the rule getter's contract, deliberately.
       jest.spyOn(service, 'getRequestsForMedia').mockResolvedValue(undefined);
 
-      await expect(service.getRequestedByUsernames(100)).resolves.toEqual([]);
+      await expect(
+        service.getRequestedByUsernames(100, 'movie'),
+      ).resolves.toEqual([]);
     });
 
     it('returns [] without calling Seerr when it is not configured', async () => {
       settings.seerrConfigured.mockReturnValue(false);
       const getRequestsForMedia = jest.spyOn(service, 'getRequestsForMedia');
 
-      await expect(service.getRequestedByUsernames(100)).resolves.toEqual([]);
+      await expect(
+        service.getRequestedByUsernames(100, 'movie'),
+      ).resolves.toEqual([]);
       expect(getRequestsForMedia).not.toHaveBeenCalled();
     });
 
@@ -581,9 +649,9 @@ describe('SeerrApiService', () => {
           requestedBy(2, { plexUsername: 'alice' }),
         ]);
 
-      await expect(service.getRequestedByUsernames(100)).resolves.toEqual([
-        'alice',
-      ]);
+      await expect(
+        service.getRequestedByUsernames(100, 'movie'),
+      ).resolves.toEqual(['alice']);
     });
   });
 });
@@ -620,5 +688,12 @@ describe('SeerrApiService.init lifecycle', () => {
     service.init();
 
     expect(service.api).toBeUndefined();
+  });
+
+  it('clears cached request snapshots when settings change', () => {
+    const cache = cacheManager.getCache(SEERR_REQUESTS_CACHE_ID).data;
+    cache.set(SEERR_REQUESTS_CACHE_KEY, new Map([['movie:1', []]]));
+    service.init();
+    expect(cache.has(SEERR_REQUESTS_CACHE_KEY)).toBe(false);
   });
 });

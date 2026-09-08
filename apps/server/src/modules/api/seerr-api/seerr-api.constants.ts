@@ -1,7 +1,7 @@
 // Shared id of the Seerr requests NodeCache (see modules/api/lib/cache.ts).
 export const SEERR_REQUESTS_CACHE_ID = 'seerrrequests';
 
-// Key under which the run-scoped request index (Map<tmdbId, SeerrRequest[]>) is
+// Key under which the run-scoped request index (Map<mediaType:tmdbId, SeerrRequest[]>) is
 // stored in that cache. The cache is flushed between rule-group runs
 // (CacheManager.flushAll), so the index is rebuilt each run from a single bulk
 // /request sweep and reused across items within the run.

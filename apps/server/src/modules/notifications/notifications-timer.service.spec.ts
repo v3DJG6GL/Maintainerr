@@ -118,7 +118,11 @@ describe('NotificationTimerService', () => {
       requestedBy: ['alice'],
     });
     // A movie has no season to narrow by.
-    expect(getRequestedByUsernames).toHaveBeenCalledWith(500, undefined);
+    expect(getRequestedByUsernames).toHaveBeenCalledWith(
+      500,
+      'movie',
+      undefined,
+    );
   });
 
   it('narrows the requester lookup to the season of a season item', async () => {
@@ -130,7 +134,7 @@ describe('NotificationTimerService', () => {
 
     await (service as never as { executeTask(): Promise<void> }).executeTask();
 
-    expect(getRequestedByUsernames).toHaveBeenCalledWith(500, 2);
+    expect(getRequestedByUsernames).toHaveBeenCalledWith(500, 'tv', 2);
   });
 
   it('narrows to the parent season of an episode item', async () => {
@@ -146,7 +150,7 @@ describe('NotificationTimerService', () => {
 
     await (service as never as { executeTask(): Promise<void> }).executeTask();
 
-    expect(getRequestedByUsernames).toHaveBeenCalledWith(500, 2);
+    expect(getRequestedByUsernames).toHaveBeenCalledWith(500, 'tv', 2);
   });
 
   it('omits requestedBy when nobody requested the item', async () => {
@@ -176,8 +180,10 @@ describe('NotificationTimerService', () => {
     expect(handleNotification).toHaveBeenCalledTimes(1);
     expect(notifiedItems(handleNotification)[0]).toMatchObject({
       mediaServerId: '1',
-      requestedBy: ['alice'],
     });
+    expect(notifiedItems(handleNotification)[0]).not.toHaveProperty(
+      'requestedBy',
+    );
   });
 
   it('skips the Seerr lookup for an item with no tmdbId', async () => {
