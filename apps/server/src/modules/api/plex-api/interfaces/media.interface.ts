@@ -1,6 +1,7 @@
 import { PlexActor, PlexGenre, PlexRating } from './library.interfaces';
 
 export interface PlexMetadata {
+  Location?: { path: string }[];
   ratingKey: string;
   parentRatingKey?: string;
   guid: string;
@@ -47,7 +48,7 @@ export interface PlexMetadata {
 
 export interface PlexMediaPart {
   id: number;
-  size: number;
+  size?: number;
   container: string;
   file?: string;
 }

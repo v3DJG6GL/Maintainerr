@@ -166,6 +166,10 @@ msgstr "{daysAgo, plural, one {# day ago} other {# days ago}}"
 msgid "{elementCount, plural, one {# element} other {# elements}}"
 msgstr "{elementCount, plural, one {# element} other {# elements}}"
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "{fileCount, plural, one {Files and folders (# file)} other {Files and folders (# files)}}"
+msgstr "{fileCount, plural, one {Files and folders (# file)} other {Files and folders (# files)}}"
+
 #: src/components/OverlayEditor/PropertiesPanel.tsx
 msgid "{formatList} - up to {imageUploadMaxLabel}."
 msgstr "{formatList} - up to {imageUploadMaxLabel}."
@@ -546,6 +550,10 @@ msgstr "Are you sure?"
 msgid "Ascending"
 msgstr "Ascending"
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "At least {size}"
+msgstr "At least {size}"
+
 #: src/components/Login/Plex/index.tsx
 msgid "Authenticate with Plex"
 msgstr "Authenticate with Plex"
@@ -925,10 +933,18 @@ msgstr "Contains (Exact list match)"
 msgid "Contains (Partial list match)"
 msgstr "Contains (Partial list match)"
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Copied"
+msgstr "Copied"
+
 #: src/components/Collection/CollectionDetail/TestMediaItem/index.tsx
 #: src/components/Common/YamlImporterModal/index.tsx
 msgid "Copied to clipboard"
 msgstr "Copied to clipboard"
+
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Copy"
+msgstr "Copy"
 
 #: src/components/Collection/CollectionDetail/TestMediaItem/index.tsx
 msgid "Copy to clipboard"
@@ -1799,6 +1815,10 @@ msgstr "Fatal"
 msgid "Feature Requests"
 msgstr "Feature Requests"
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "File information is unavailable."
+msgstr "File information is unavailable."
+
 #: src/components/Rules/RuleGroup/AddModal/CollectionPosterPicker.tsx
 msgid "File is larger than {maxSize}"
 msgstr "File is larger than {maxSize}"
@@ -1806,6 +1826,10 @@ msgstr "File is larger than {maxSize}"
 #: src/components/Settings/Main/DatabaseBackupModal.tsx
 msgid "File name"
 msgstr "File name"
+
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Files & storage"
+msgstr "Files & storage"
 
 #: src/components/OverlayEditor/PropertiesPanel.tsx
 msgid "Fill"
@@ -1830,6 +1854,10 @@ msgstr "First Air Date Descending"
 #: src/components/Rules/Rule/RuleCreator/RuleInput/index.tsx
 msgid "First Value"
 msgstr "First Value"
+
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Folder"
+msgstr "Folder"
 
 #: src/components/OverlayEditor/PropertiesPanel.tsx
 msgid "Font"
@@ -2628,6 +2656,10 @@ msgstr "No libraries reported. Add libraries in your media server, then refresh.
 msgid "No log files found"
 msgstr "No log files found"
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "No media files reported."
+msgstr "No media files reported."
+
 #: src/components/Calendar/index.tsx
 msgid "No media items found for this scheduled action."
 msgstr "No media items found for this scheduled action."
@@ -2879,6 +2911,10 @@ msgstr "Padding"
 #: src/components/Settings/DownloadClient/index.tsx
 msgid "Password"
 msgstr "Password"
+
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Path unavailable"
+msgstr "Path unavailable"
 
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
 msgid "Plays"
@@ -3233,6 +3269,10 @@ msgstr "Restore original artwork for all collections?"
 msgid "Retrieving servers..."
 msgstr "Retrieving servers..."
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Retry"
+msgstr "Retry"
+
 #: src/components/OverlayEditor/PropertiesPanel.tsx
 msgid "right"
 msgstr "right"
@@ -3493,6 +3533,10 @@ msgstr "Select Second Value..."
 msgid "Select the admin user for Maintainerr operations."
 msgstr "Select the admin user for Maintainerr operations."
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Select the path to copy it."
+msgstr "Select the path to copy it."
+
 #: src/components/Settings/MediaServerSelector/index.tsx
 msgid "Select your media server to get started with Maintainerr."
 msgstr "Select your media server to get started with Maintainerr."
@@ -3641,6 +3685,10 @@ msgstr "Size"
 msgid "Size on disk reported by the media server"
 msgstr "Size on disk reported by the media server"
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Size unavailable"
+msgstr "Size unavailable"
+
 #: src/components/StorageMetrics/index.tsx
 msgid "Sizes approximate on-disk bytes and may not fully reflect hardlinks, sparse files, or filesystem snapshots."
 msgstr "Sizes approximate on-disk bytes and may not fully reflect hardlinks, sparse files, or filesystem snapshots."
@@ -3648,6 +3696,10 @@ msgstr "Sizes approximate on-disk bytes and may not fully reflect hardlinks, spa
 #: src/components/Rules/Rule/RuleCreator/RuleInput/index.tsx
 msgid "Smaller"
 msgstr "Smaller"
+
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Some file information could not be read. The total may be incomplete."
+msgstr "Some file information could not be read. The total may be incomplete."
 
 #: src/components/Rules/Rule/RuleCreator/index.tsx
 msgid "Some incomplete rules won't be saved"

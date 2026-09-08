@@ -2,6 +2,7 @@ import { PlexCollection, PlexPlaylist } from './collection.interface';
 import { Media } from './media.interface';
 
 export interface PlexLibraryItem {
+  Location?: { path: string }[];
   ratingKey: string;
   parentRatingKey?: string;
   grandparentRatingKey?: string;

@@ -319,6 +319,28 @@ describe('PlexMapper', () => {
       expect(result.mediaSources[0].videoCodec).toBe('h264');
     });
 
+    it('preserves multipart paths and unknown part sizes', () => {
+      const result = PlexMapper.toMediaItem({
+        ...basePlexItem,
+        Location: [{ path: '/media/folder' }],
+        Media: [
+          {
+            ...basePlexItem.Media[0],
+            Part: [
+              { id: 1, container: 'mkv', file: '/media/part1.mkv', size: 0 },
+              { id: 2, container: 'mkv', file: '/media/part2.mkv' },
+            ],
+          },
+        ],
+      });
+      expect(result.folderPaths).toEqual(['/media/folder']);
+      expect(result.mediaSources[0].sizeBytes).toBeUndefined();
+      expect(result.mediaSources[0].files).toEqual([
+        { id: '1', path: '/media/part1.mkv', sizeBytes: 0 },
+        { id: '2', path: '/media/part2.mkv', sizeBytes: undefined },
+      ]);
+    });
+
     it('should convert library info correctly', () => {
       const result = PlexMapper.toMediaItem(basePlexItem);
 

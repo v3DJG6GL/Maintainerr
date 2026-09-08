@@ -166,6 +166,10 @@ msgstr "{daysAgo, plural, one {för # dag sedan} other {för # dagar sedan}}"
 msgid "{elementCount, plural, one {# element} other {# elements}}"
 msgstr "{elementCount, plural, one {# element} other {# element}}"
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "{fileCount, plural, one {Files and folders (# file)} other {Files and folders (# files)}}"
+msgstr ""
+
 #: src/components/OverlayEditor/PropertiesPanel.tsx
 msgid "{formatList} - up to {imageUploadMaxLabel}."
 msgstr "{formatList} - upp till {imageUploadMaxLabel}."
@@ -546,6 +550,10 @@ msgstr "Är du säker?"
 msgid "Ascending"
 msgstr "Stigande"
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "At least {size}"
+msgstr ""
+
 #: src/components/Login/Plex/index.tsx
 msgid "Authenticate with Plex"
 msgstr "Autentisera med Plex"
@@ -925,10 +933,18 @@ msgstr "Innehåller (exakt listmatchning)"
 msgid "Contains (Partial list match)"
 msgstr "Innehåller (delvis listmatchning)"
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Copied"
+msgstr ""
+
 #: src/components/Collection/CollectionDetail/TestMediaItem/index.tsx
 #: src/components/Common/YamlImporterModal/index.tsx
 msgid "Copied to clipboard"
 msgstr "Kopierat till urklipp"
+
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Copy"
+msgstr ""
 
 #: src/components/Collection/CollectionDetail/TestMediaItem/index.tsx
 msgid "Copy to clipboard"
@@ -1799,6 +1815,10 @@ msgstr "Fatal"
 msgid "Feature Requests"
 msgstr "Funktionsönskemål"
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "File information is unavailable."
+msgstr ""
+
 #: src/components/Rules/RuleGroup/AddModal/CollectionPosterPicker.tsx
 msgid "File is larger than {maxSize}"
 msgstr "Filen är större än {maxSize}"
@@ -1806,6 +1826,10 @@ msgstr "Filen är större än {maxSize}"
 #: src/components/Settings/Main/DatabaseBackupModal.tsx
 msgid "File name"
 msgstr "Filnamn"
+
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Files & storage"
+msgstr ""
 
 #: src/components/OverlayEditor/PropertiesPanel.tsx
 msgid "Fill"
@@ -1830,6 +1854,10 @@ msgstr "Första sändningsdatum fallande"
 #: src/components/Rules/Rule/RuleCreator/RuleInput/index.tsx
 msgid "First Value"
 msgstr "Första värdet"
+
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Folder"
+msgstr ""
 
 #: src/components/OverlayEditor/PropertiesPanel.tsx
 msgid "Font"
@@ -2628,6 +2656,10 @@ msgstr "Inga bibliotek rapporterade. Lägg till bibliotek i din mediaserver och 
 msgid "No log files found"
 msgstr "Inga loggfiler hittades"
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "No media files reported."
+msgstr ""
+
 #: src/components/Calendar/index.tsx
 msgid "No media items found for this scheduled action."
 msgstr "Inga mediaobjekt hittades för den här schemalagda åtgärden."
@@ -2879,6 +2911,10 @@ msgstr "Padding"
 #: src/components/Settings/DownloadClient/index.tsx
 msgid "Password"
 msgstr "Lösenord"
+
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Path unavailable"
+msgstr ""
 
 #: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
 msgid "Plays"
@@ -3233,6 +3269,10 @@ msgstr "Återställa originalomslag för alla samlingar?"
 msgid "Retrieving servers..."
 msgstr "Hämtar servrar..."
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Retry"
+msgstr ""
+
 #: src/components/OverlayEditor/PropertiesPanel.tsx
 msgid "right"
 msgstr "höger"
@@ -3493,6 +3533,10 @@ msgstr "Välj andra värdet..."
 msgid "Select the admin user for Maintainerr operations."
 msgstr "Välj administratörsanvändaren för Maintainerrs åtgärder."
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Select the path to copy it."
+msgstr ""
+
 #: src/components/Settings/MediaServerSelector/index.tsx
 msgid "Select your media server to get started with Maintainerr."
 msgstr "Välj din mediaserver för att komma igång med Maintainerr."
@@ -3641,6 +3685,10 @@ msgstr "Storlek"
 msgid "Size on disk reported by the media server"
 msgstr "Storlek på disk enligt mediaservern"
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Size unavailable"
+msgstr ""
+
 #: src/components/StorageMetrics/index.tsx
 msgid "Sizes approximate on-disk bytes and may not fully reflect hardlinks, sparse files, or filesystem snapshots."
 msgstr "Storlekarna är ungefärliga byte på disk och tar inte full hänsyn till hardlinks, sparse-filer eller filsystems-snapshots."
@@ -3648,6 +3696,10 @@ msgstr "Storlekarna är ungefärliga byte på disk och tar inte full hänsyn til
 #: src/components/Rules/Rule/RuleCreator/RuleInput/index.tsx
 msgid "Smaller"
 msgstr "Mindre"
+
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Some file information could not be read. The total may be incomplete."
+msgstr ""
 
 #: src/components/Rules/Rule/RuleCreator/index.tsx
 msgid "Some incomplete rules won't be saved"

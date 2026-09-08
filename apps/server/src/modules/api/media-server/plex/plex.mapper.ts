@@ -1,3 +1,4 @@
+import { toLocalMediaPath } from '../media-file-path';
 import {
   MediaActor,
   MediaCollection,
@@ -213,6 +214,9 @@ export class PlexMapper {
       updatedAt: plex.updatedAt ? new Date(plex.updatedAt * 1000) : undefined,
       providerIds: PlexMapper.extractProviderIds(plex.Guid, plex.guid),
       mediaSources: PlexMapper.toMediaSources(plex.Media),
+      folderPaths: plex.Location?.map((location) =>
+        toLocalMediaPath(location.path),
+      ).filter((path): path is string => path !== undefined),
       library: {
         id: plex.librarySectionID?.toString(),
         title: plex.librarySectionTitle,
@@ -263,6 +267,9 @@ export class PlexMapper {
       updatedAt: plex.updatedAt ? new Date(plex.updatedAt * 1000) : undefined,
       providerIds: PlexMapper.extractProviderIds(plex.Guid, plex.guid),
       mediaSources: PlexMapper.toMediaSources(plex.Media || plex.media),
+      folderPaths: plex.Location?.map((location) =>
+        toLocalMediaPath(location.path),
+      ).filter((path): path is string => path !== undefined),
       library: {
         id: plex.librarySectionID?.toString() ?? '',
         title: plex.librarySectionTitle ?? '',
@@ -400,7 +407,14 @@ export class PlexMapper {
       videoResolution: m.videoResolution,
       container: m.container,
       sizeBytes:
-        m.Part?.reduce((sum, p) => sum + (p.size || 0), 0) || undefined,
+        m.Part?.length && m.Part.every((part) => part.size != null)
+          ? m.Part.reduce((sum, part) => sum + part.size, 0)
+          : undefined,
+      files: m.Part?.map((part) => ({
+        id: String(part.id),
+        path: toLocalMediaPath(part.file),
+        sizeBytes: part.size,
+      })),
     }));
   }
 

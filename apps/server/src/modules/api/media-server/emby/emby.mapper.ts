@@ -1,3 +1,4 @@
+import { toLocalMediaPath } from '../media-file-path';
 import {
   type MediaActor,
   type MediaCollection,
@@ -133,6 +134,10 @@ export class EmbyMapper {
         : undefined,
       providerIds: EmbyMapper.extractProviderIds(item.ProviderIds),
       mediaSources: EmbyMapper.toMediaSources(item.MediaSources),
+      folderPaths:
+        item.IsFolder && toLocalMediaPath(item.Path)
+          ? [toLocalMediaPath(item.Path)!]
+          : undefined,
       library: {
         id: item.ParentId || '',
         title: '',
@@ -300,7 +305,14 @@ export class EmbyMapper {
           ? `${videoStream.Width}x${videoStream.Height}`
           : undefined,
         container: source.Container || undefined,
-        sizeBytes: source.Size || undefined,
+        sizeBytes: source.Size ?? undefined,
+        files: [
+          {
+            id: source.Id || undefined,
+            path: toLocalMediaPath(source.Path),
+            sizeBytes: source.Size ?? undefined,
+          },
+        ],
       };
     });
   }

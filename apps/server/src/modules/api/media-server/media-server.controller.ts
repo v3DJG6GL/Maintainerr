@@ -42,6 +42,8 @@ import { MediaServerSetupGuard } from './guards';
 import { MediaItemEnrichmentService } from './media-item-enrichment.service';
 import { MediaServerFactory } from './media-server.factory';
 import { IMediaServerService } from './media-server.interface';
+import { getMediaStorageDetails } from './media-storage';
+import type { MediaStorageDetails } from '@maintainerr/contracts';
 
 const mediaLibrarySortQuerySchema = z.enum(mediaLibrarySortFields).optional();
 const mediaSortOrderQuerySchema = z.enum(mediaSortOrders).optional();
@@ -379,6 +381,14 @@ export class MediaServerController {
   async getMetadata(@Param('id') id: string): Promise<MediaItem | undefined> {
     const mediaServer = await this.mediaServerFactory.getService();
     return mediaServer.getMetadata(id);
+  }
+
+  @Get('meta/:id/storage')
+  async getStorageDetails(
+    @Param('id') id: string,
+  ): Promise<MediaStorageDetails> {
+    const mediaServer = await this.mediaServerFactory.getService();
+    return getMediaStorageDetails(mediaServer, id);
   }
 
   @Get('meta/:id/maintainerr-status')

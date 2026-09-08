@@ -24,6 +24,7 @@ import {
 import Button from '../../Button'
 import LoadingSpinner from '../../LoadingSpinner'
 import StreamystatsStatsPanel from './StreamystatsStatsPanel'
+import MediaStoragePanel from './MediaStoragePanel'
 import {
   emptyMaintainerrMediaStatusDetails,
   getMaintainerrStatusDetailsKey,
@@ -827,6 +828,8 @@ const MediaModalContent: React.FC<ModalContentProps> = memo(
                 </Trans>
               </div>
             ) : null}
+
+            <MediaStoragePanel itemId={String(id)} serverId={machineId} />
 
             {isJellyfin && streamystatsItemUrl ? (
               <StreamystatsStatsPanel

@@ -15,7 +15,31 @@ export interface MediaProviderIds {
 /**
  * Media source/file information
  */
+export interface MediaFile {
+  id?: string
+  path?: string
+  sizeBytes?: number
+}
+
+export interface MediaStorageFile extends MediaFile {
+  itemId: string
+  title: string
+  sourceId: string
+  videoResolution?: string
+  videoCodec?: string
+  audioCodec?: string
+  container?: string
+}
+
+export interface MediaStorageDetails {
+  status: 'complete' | 'partial' | 'unavailable'
+  sizeBytes: number | null
+  files: MediaStorageFile[]
+  folders: string[]
+}
+
 export interface MediaSource {
+  files?: MediaFile[]
   id: string
   duration: number
   bitrate?: number
@@ -76,6 +100,7 @@ export interface MediaItem {
   updatedAt?: Date
   providerIds: MediaProviderIds
   mediaSources: MediaSource[]
+  folderPaths?: string[]
   library: {
     id: string
     title: string

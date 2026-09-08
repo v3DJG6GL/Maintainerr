@@ -282,6 +282,20 @@ describe('EmbyMapper', () => {
       });
     });
 
+    it('keeps folder locations separate from files and preserves zero bytes', () => {
+      const result = EmbyMapper.toMediaItem({
+        ...baseItem,
+        IsFolder: true,
+        Path: '/media/folder',
+        MediaSources: [{ Id: 'source', Path: '/media/file.mkv', Size: 0 }],
+      });
+      expect(result.folderPaths).toEqual(['/media/folder']);
+      expect(result.mediaSources[0].files).toEqual([
+        { id: 'source', path: '/media/file.mkv', sizeBytes: 0 },
+      ]);
+      expect(result.mediaSources[0].sizeBytes).toBe(0);
+    });
+
     it('parses AspectRatio expressed as a fraction', () => {
       const result = EmbyMapper.toMediaItem(baseItem);
 

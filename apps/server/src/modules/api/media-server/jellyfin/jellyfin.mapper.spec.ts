@@ -223,6 +223,20 @@ describe('JellyfinMapper', () => {
         expect(result.mediaSources[0].audioChannels).toBe(6);
       });
 
+      it('keeps folder locations separate from files and preserves zero bytes', () => {
+        const result = JellyfinMapper.toMediaItem({
+          ...episodeItem,
+          IsFolder: true,
+          Path: '/media/folder',
+          MediaSources: [{ Id: 'source', Path: '/media/file.mkv', Size: 0 }],
+        });
+        expect(result.folderPaths).toEqual(['/media/folder']);
+        expect(result.mediaSources[0].files).toEqual([
+          { id: 'source', path: '/media/file.mkv', sizeBytes: 0 },
+        ]);
+        expect(result.mediaSources[0].sizeBytes).toBe(0);
+      });
+
       it('should convert genres correctly', () => {
         const result = JellyfinMapper.toMediaItem(episodeItem);
 

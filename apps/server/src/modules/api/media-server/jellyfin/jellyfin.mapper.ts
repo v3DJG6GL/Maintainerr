@@ -1,3 +1,4 @@
+import { toLocalMediaPath } from '../media-file-path';
 import {
   type BaseItemDto,
   BaseItemKind,
@@ -174,6 +175,10 @@ export class JellyfinMapper {
         : undefined,
       providerIds: JellyfinMapper.extractProviderIds(item.ProviderIds),
       mediaSources: JellyfinMapper.toMediaSources(item.MediaSources),
+      folderPaths:
+        item.IsFolder && toLocalMediaPath(item.Path)
+          ? [toLocalMediaPath(item.Path)!]
+          : undefined,
       library: {
         id: item.ParentId || '',
         title: '',
@@ -362,7 +367,14 @@ export class JellyfinMapper {
           ? `${videoStream.Width}x${videoStream.Height}`
           : undefined,
         container: source.Container || undefined,
-        sizeBytes: source.Size || undefined,
+        sizeBytes: source.Size ?? undefined,
+        files: [
+          {
+            id: source.Id || undefined,
+            path: toLocalMediaPath(source.Path),
+            sizeBytes: source.Size ?? undefined,
+          },
+        ],
       };
     });
   }
