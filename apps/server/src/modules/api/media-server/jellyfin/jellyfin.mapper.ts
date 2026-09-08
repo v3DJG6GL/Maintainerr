@@ -184,7 +184,7 @@ export class JellyfinMapper {
         title: '',
       },
       summary: item.Overview || undefined,
-      viewCount: item.UserData?.PlayCount || undefined,
+      viewCount: item.UserData?.PlayCount ?? undefined,
       skipCount: undefined, // Jellyfin doesn't track skip count
       lastViewedAt: item.UserData?.LastPlayedDate
         ? new Date(item.UserData.LastPlayedDate)

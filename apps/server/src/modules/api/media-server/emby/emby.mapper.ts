@@ -143,7 +143,7 @@ export class EmbyMapper {
         title: '',
       },
       summary: item.Overview || undefined,
-      viewCount: item.UserData?.PlayCount || undefined,
+      viewCount: item.UserData?.PlayCount ?? undefined,
       skipCount: undefined,
       lastViewedAt: item.UserData?.LastPlayedDate
         ? new Date(item.UserData.LastPlayedDate)
