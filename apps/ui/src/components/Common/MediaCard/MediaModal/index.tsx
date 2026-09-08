@@ -594,11 +594,11 @@ const MediaModalContent: React.FC<ModalContentProps> = memo(
 
     return (
       <div className="modal-backdrop px-3" onClick={onClose}>
-        {/* A column, like the shared Modal: only the body scrolls, so the
-            actions and the close stay on screen on a phone, where the sheet
-            fills the height. */}
+        {/* Keep the shell height stable when details expand or data arrives.
+            Only the body scrolls, so the dialog does not recenter and move
+            the clicked control, and the actions stay on screen. */}
         <div
-          className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-zinc-800 shadow-lg"
+          className="relative flex h-[90dvh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-zinc-800 shadow-lg"
           onClick={(event) => event.stopPropagation()}
           role="dialog"
           aria-modal="true"
@@ -609,7 +609,7 @@ const MediaModalContent: React.FC<ModalContentProps> = memo(
           {/* Capped by height too: the sm height is keyed on width, so a phone
               in landscape got the tablet backdrop and it pushed the footer
               out of the sheet. */}
-          <div className="relative h-40 max-h-[50vh] w-full shrink-0 overflow-hidden p-2 sm:h-72 xl:h-96">
+          <div className="relative h-40 max-h-[50dvh] w-full shrink-0 overflow-hidden p-2 sm:h-72 xl:h-96">
             <div
               className="h-full w-full rounded-xl bg-cover bg-center bg-no-repeat"
               style={{
@@ -806,7 +806,7 @@ const MediaModalContent: React.FC<ModalContentProps> = memo(
               </div>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto p-4">
             <div className="flex items-center justify-between border-b border-zinc-700 pb-4">
               <div>
                 <h2 className="text-xl font-semibold text-gray-100">
