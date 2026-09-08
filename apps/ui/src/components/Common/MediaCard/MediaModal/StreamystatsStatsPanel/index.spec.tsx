@@ -116,6 +116,7 @@ describe('StreamystatsStatsPanel', () => {
 
     expect(screen.getByText('92%')).toBeTruthy()
     expect(screen.getByText('alice')).toBeTruthy()
+    expect(screen.getByText('10h')).toBeTruthy()
   })
 
   it('shows an empty-state message when no data exists for the item (404)', async () => {

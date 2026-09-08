@@ -4257,6 +4257,10 @@ msgstr "Total Media in Collections"
 msgid "Total size not reported by this instance - only free space is accurate."
 msgstr "Total size not reported by this instance - only free space is accurate."
 
+#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+msgid "Total watch time"
+msgstr "Total watch time"
+
 #: src/components/Settings/Tracearr/index.tsx
 msgid "Tracearr server"
 msgstr "Tracearr server"

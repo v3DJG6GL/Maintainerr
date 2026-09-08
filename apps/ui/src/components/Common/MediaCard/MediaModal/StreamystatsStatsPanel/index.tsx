@@ -81,12 +81,20 @@ const StreamystatsStatsContent = ({
               <Trans>No watch history recorded yet.</Trans>
             </p>
           ) : null}
-          <dl className="grid grid-cols-3 gap-3">
+          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div>
               <dt className="text-xs tracking-wide text-zinc-100/60 uppercase">
                 <Trans>Plays</Trans>
               </dt>
               <dd className="font-medium">{data.totalViews}</dd>
+            </div>
+            <div>
+              <dt className="text-xs tracking-wide text-zinc-100/60 uppercase">
+                <Trans>Total watch time</Trans>
+              </dt>
+              <dd className="font-medium">
+                {formatWatchTime(data.totalWatchTime)}
+              </dd>
             </div>
             <div>
               <dt className="text-xs tracking-wide text-zinc-100/60 uppercase">
