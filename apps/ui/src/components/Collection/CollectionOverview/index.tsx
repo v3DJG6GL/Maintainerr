@@ -1,7 +1,6 @@
 import { ICollection } from '..'
 import { useMediaServerLibraries } from '../../../api/media-server'
-import { useTaskStatusContext } from '../../../contexts/taskstatus-context'
-import ExecuteButton from '../../Common/ExecuteButton'
+import TriggerCollectionActionsButton from '../TriggerCollectionActionsButton'
 import LibrarySwitcher from '../../Common/LibrarySwitcher'
 import LoadingSpinner, {
   SmallLoadingSpinner,
@@ -15,13 +14,11 @@ interface ICollectionOverview {
   onSwitchLibrary: (id: string) => void
   selectedLibraryId?: string
   isLoading: boolean
-  doActions: () => void
   openDetail: (collection: ICollection) => void
 }
 
 const CollectionOverview = (props: ICollectionOverview) => {
   const { t } = useLingui()
-  const { collectionHandlerRunning } = useTaskStatusContext()
   const {
     data: libraries,
     error: librariesError,
@@ -37,16 +34,7 @@ const CollectionOverview = (props: ICollectionOverview) => {
       <PageControlRow
         sticky
         actionsClassName="justify-center sm:justify-start"
-        actions={
-          <ExecuteButton
-            className="mx-0"
-            onClick={props.doActions}
-            text={t`Handle Collections`}
-            executing={collectionHandlerRunning}
-            disabled={collectionHandlerRunning}
-            title={t`Executes each collection's configured action (Delete / Unmonitor / Do Nothing). Does not remove items from collections.`}
-          />
-        }
+        actions={<TriggerCollectionActionsButton />}
         controls={
           <LibrarySwitcher
             containerClassName="mb-0"
@@ -88,6 +76,10 @@ const CollectionOverview = (props: ICollectionOverview) => {
                 <CollectionItem
                   collection={col}
                   onClick={() => props.openDetail(col)}
+                />
+                <TriggerCollectionActionsButton
+                  collection={col}
+                  className="mt-3"
                 />
               </li>
             ))}

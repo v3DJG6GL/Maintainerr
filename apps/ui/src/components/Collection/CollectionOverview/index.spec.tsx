@@ -1,5 +1,5 @@
 import type { MediaLibrary } from '@maintainerr/contracts'
-import { render, screen } from '../../../test-utils/render'
+import { fireEvent, render, screen } from '../../../test-utils/render'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useMediaServerLibraries } from '../../../api/media-server'
 import { useTaskStatusContext } from '../../../contexts/taskstatus-context'
@@ -18,8 +18,12 @@ vi.mock('../../Common/LibrarySwitcher', () => ({
   default: () => <div data-testid="library-switcher" />,
 }))
 
-vi.mock('../../Common/ExecuteButton', () => ({
-  default: () => <button type="button">Handle Collections</button>,
+vi.mock('../TriggerCollectionActionsButton', () => ({
+  default: ({ collection }: { collection?: { id: number } }) => (
+    <button type="button" data-collection-id={collection?.id}>
+      Trigger Rule Actions
+    </button>
+  ),
 }))
 
 vi.mock('../../Common/LoadingSpinner', () => ({
@@ -30,8 +34,16 @@ vi.mock('../../Common/LoadingSpinner', () => ({
 }))
 
 vi.mock('../CollectionItem', () => ({
-  default: ({ collection }: { collection: { title: string } }) => (
-    <div>{collection.title}</div>
+  default: ({
+    collection,
+    onClick,
+  }: {
+    collection: { title: string }
+    onClick: () => void
+  }) => (
+    <a href="#detail" onClick={onClick}>
+      {collection.title}
+    </a>
   ),
 }))
 
@@ -60,7 +72,6 @@ describe('CollectionOverview', () => {
         onSwitchLibrary={vi.fn()}
         selectedLibraryId="all"
         isLoading={true}
-        doActions={vi.fn()}
         openDetail={vi.fn()}
       />,
     )
@@ -72,6 +83,29 @@ describe('CollectionOverview', () => {
     )
   })
 
+  it('places the scoped action outside the collection link', () => {
+    const openDetail = vi.fn()
+    render(
+      <CollectionOverview
+        collections={[{ id: 42, title: 'Sample Collection' } as any]}
+        onSwitchLibrary={vi.fn()}
+        isLoading={false}
+        openDetail={openDetail}
+      />,
+    )
+    const buttons = screen.getAllByRole('button', {
+      name: 'Trigger Rule Actions',
+    })
+    const scoped = buttons.find(
+      (button) => button.getAttribute('data-collection-id') === '42',
+    )!
+    expect(scoped.closest('a')).toBe(null)
+    fireEvent.click(scoped)
+    expect(openDetail).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('link', { name: 'Sample Collection' }))
+    expect(openDetail).toHaveBeenCalledTimes(1)
+  })
+
   it('shows an inline loading placeholder before the first collection batch arrives', () => {
     render(
       <CollectionOverview
@@ -79,7 +113,6 @@ describe('CollectionOverview', () => {
         onSwitchLibrary={vi.fn()}
         selectedLibraryId="all"
         isLoading={true}
-        doActions={vi.fn()}
         openDetail={vi.fn()}
       />,
     )

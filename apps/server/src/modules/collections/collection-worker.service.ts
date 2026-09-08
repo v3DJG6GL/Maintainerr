@@ -159,12 +159,36 @@ export class CollectionWorkerService extends TaskBase {
     });
   }
 
-  protected async executeTask() {
+  public executeForCollection(
+    collectionId: number,
+    abortController?: AbortController,
+  ): Promise<void> {
+    if (!Number.isSafeInteger(collectionId) || collectionId <= 0) {
+      return Promise.reject(
+        new RangeError('A positive collection ID is required.'),
+      );
+    }
+    return this.executeWith(
+      (signal) => this.handleCollections(signal, collectionId),
+      abortController,
+    );
+  }
+
+  protected executeTask(abortSignal: AbortSignal): Promise<void> {
+    return this.handleCollections(abortSignal);
+  }
+
+  private async handleCollections(
+    abortSignal: AbortSignal,
+    collectionId?: number,
+  ): Promise<void> {
+    const scope =
+      collectionId === undefined
+        ? 'all collections'
+        : `collection ${collectionId}`;
     this.eventEmitter.emit(
       MaintainerrEvent.CollectionHandler_Started,
-      new CollectionHandlerStartedEventDto(
-        'Started handling of all collections',
-      ),
+      new CollectionHandlerStartedEventDto(`Started handling of ${scope}`),
     );
 
     // Acquire shared lock to avoid overlap with rule execution
@@ -174,6 +198,7 @@ export class CollectionWorkerService extends TaskBase {
     let failed = false;
 
     try {
+      abortSignal.throwIfAborted();
       // Verify the only hard dependency for collection handling: the media
       // server. Ancillary services (Radarr/Sonarr/Seerr/Tautulli) are
       // exercised at the call site by the handler, so a transient blip in
@@ -199,7 +224,7 @@ export class CollectionWorkerService extends TaskBase {
       // a failed lookup) simply means "handle as usual".
       const playingItemIds = await mediaServer.getActiveSessions();
 
-      this.logger.log('Started handling of all collections');
+      this.logger.log(`Started handling of ${scope}`);
       let handledCollectionMedia = 0;
       let removedMissingMedia = 0;
       let collectionHandlingFailed = false;
@@ -207,9 +232,12 @@ export class CollectionWorkerService extends TaskBase {
       let noWindowCollectionCount = 0;
       let noDueMediaCollectionCount = 0;
 
-      // loop over all active collections
+      // Preserve active filtering for both global and collection-scoped runs.
       const collections = await this.collectionRepo.find({
-        where: { isActive: true },
+        where: {
+          isActive: true,
+          ...(collectionId === undefined ? {} : { id: collectionId }),
+        },
       });
 
       const collectionsToHandle = collections.filter((collection) => {
@@ -247,6 +275,7 @@ export class CollectionWorkerService extends TaskBase {
       const exclusionsFor = await this.readExclusionsPerCollection();
 
       for (const collection of collectionsToHandle) {
+        abortSignal.throwIfAborted();
         const dangerDate = getCollectionDangerDate(
           effectiveDeletionWindow(collection),
         );
@@ -470,7 +499,7 @@ export class CollectionWorkerService extends TaskBase {
               );
 
               this.logger.log(
-                `All collections handled. Triggered Seerr's availability-sync because media was altered`,
+                `Finished handling ${scope}. Triggered Seerr's availability-sync because media was altered`,
               );
             } catch (error) {
               this.logger.error(`Failed to trigger Seerr's availability-sync`);
@@ -479,12 +508,15 @@ export class CollectionWorkerService extends TaskBase {
           });
         }
       } else {
-        this.logger.log(`All collections handled. No data was altered`);
+        this.logger.log(`Finished handling ${scope}. No data was altered`);
       }
 
-      // Update cached total size for all collections
+      // Refresh cached sizes only within this run's collection scope.
       this.logger.log('Updating collection size cache...');
-      const allCollections = await this.collectionRepo.find();
+      const allCollections =
+        collectionId === undefined
+          ? await this.collectionRepo.find()
+          : await this.collectionRepo.find({ where: { id: collectionId } });
       for (const collection of allCollections) {
         try {
           await this.collectionsService.updateCollectionTotalSize(
@@ -512,8 +544,8 @@ export class CollectionWorkerService extends TaskBase {
         MaintainerrEvent.CollectionHandler_Finished,
         new CollectionHandlerFinishedEventDto(
           failed
-            ? 'Finished collection handling with errors'
-            : 'Finished collection handling',
+            ? `Finished handling ${scope} with errors`
+            : `Finished handling ${scope}`,
         ),
       );
     }

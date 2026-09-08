@@ -8,7 +8,8 @@ import {
   RuleHandlerStartedEventDto,
   TaskStatusDto,
 } from '@maintainerr/contracts'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { invalidateCollectionQueries } from '../api/collections'
 import { createContext, use, useMemo, useState } from 'react'
 import { useRuleHandlerStatus } from '../api/rules'
 import GetApiHandler from '../utils/ApiHandler'
@@ -26,6 +27,7 @@ export const TaskStatusContext = createContext<TaskStatusState | undefined>(
 TaskStatusContext.displayName = 'TaskStatusContext'
 
 export const TaskStatusProvider = (props: any) => {
+  const queryClient = useQueryClient()
   const [ruleHandlerRunningState, setRuleHandlerRunningState] =
     useState<TaskStatusDto>()
   const [collectionHandlerRunningState, setCollectionHandlerRunningState] =
@@ -97,6 +99,7 @@ export const TaskStatusProvider = (props: any) => {
     MaintainerrEvent.CollectionHandler_Finished,
     (event) => {
       updateCollectionExecutorRunning(false, event.time)
+      void invalidateCollectionQueries(queryClient)
     },
   )
 
@@ -114,13 +117,14 @@ export const TaskStatusProvider = (props: any) => {
   }, [ruleHandlerRunningState, ruleHandlerStatus])
 
   const collectionHandlerRunning = useMemo(() => {
-    if (collectionHandlerRunningState) return collectionHandlerRunningState
+    const queriedStatus = collectionHandlerStatusQuery.data
+    if (!collectionHandlerRunningState) return queriedStatus
+    if (!queriedStatus) return collectionHandlerRunningState
 
-    if (collectionHandlerStatusQuery.data) {
-      return collectionHandlerStatusQuery.data
-    }
-
-    return undefined
+    return new Date(queriedStatus.time).getTime() >
+      new Date(collectionHandlerRunningState.time).getTime()
+      ? queriedStatus
+      : collectionHandlerRunningState
   }, [collectionHandlerRunningState, collectionHandlerStatusQuery.data])
 
   const queueStatus = useMemo(() => {

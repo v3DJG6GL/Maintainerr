@@ -6,6 +6,7 @@ import { toast } from 'react-toastify'
 import { useCollection } from '../api/collections'
 import { useRuleGroupForCollection } from '../api/rules'
 import { ICollection } from '../components/Collection'
+import TriggerCollectionActionsButton from '../components/Collection/TriggerCollectionActionsButton'
 import ExecuteButton from '../components/Common/ExecuteButton'
 import LazyModalBoundary from '../components/Common/LazyModalBoundary'
 import LoadingSpinner from '../components/Common/LoadingSpinner'
@@ -116,17 +117,20 @@ const CollectionDetailPage = () => {
         {/* Test Media belongs to this collection's rules, so it sits with its
             title: the same place on every tab, and out of the pinned row that
             carries the media actions. */}
-        <div className="m-auto mb-3 flex w-full items-center gap-3">
-          <h1 className="flex w-full justify-center overflow-hidden text-lg font-bold text-ellipsis whitespace-nowrap text-zinc-200 sm:m-0 sm:justify-start xl:m-0">
+        <div className="m-auto mb-3 flex w-full flex-wrap items-center gap-3">
+          <h1 className="min-w-0 flex-1 overflow-hidden text-lg font-bold text-ellipsis whitespace-nowrap text-zinc-200 sm:m-0 sm:justify-start xl:m-0">
             {collection.title}
           </h1>
-          {ruleGroup?.useRules ? (
-            <ExecuteButton
-              className="mx-0 shrink-0"
-              onClick={() => setMediaTestModalOpen(true)}
-              text={t`Test Media`}
-            />
-          ) : null}
+          <div className="flex flex-wrap items-center gap-3">
+            <TriggerCollectionActionsButton collection={collection} />
+            {ruleGroup?.useRules ? (
+              <ExecuteButton
+                className="mx-0 shrink-0"
+                onClick={() => setMediaTestModalOpen(true)}
+                text={t`Test Media`}
+              />
+            ) : null}
+          </div>
         </div>
 
         <div>

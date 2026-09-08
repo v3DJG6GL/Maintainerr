@@ -108,6 +108,8 @@ integrations, and production static serving.
   service data.
 - `src/modules/collections/` tracks matched media, exclusions, collection logs,
   posters, and collection handling actions.
+  Scheduled, global manual, and per-collection action runs share the same
+  worker and due-item eligibility checks.
 - `src/modules/media-analytics/` composes media, collection and analytics APIs
   for source-specific browsing snapshots. It sorts complete snapshots before
   pagination and keeps native media-server collection ordering independent.

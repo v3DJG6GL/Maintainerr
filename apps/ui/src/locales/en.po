@@ -819,7 +819,7 @@ msgstr "Collection {collectionId}"
 msgid "Collection Handler"
 msgstr "Collection Handler"
 
-#: src/pages/CollectionsListPage.tsx
+#: src/components/Collection/TriggerCollectionActionsButton.tsx
 msgid "Collection handling is already running."
 msgstr "Collection handling is already running."
 
@@ -1577,10 +1577,6 @@ msgstr "Exclusion tag"
 msgid "Exclusions"
 msgstr "Exclusions"
 
-#: src/components/Collection/CollectionOverview/index.tsx
-msgid "Executes each collection's configured action (Delete / Unmonitor / Do Nothing). Does not remove items from collections."
-msgstr "Executes each collection's configured action (Delete / Unmonitor / Do Nothing). Does not remove items from collections."
-
 #: src/components/Overlays/index.tsx
 msgid "Existing Templates"
 msgstr "Existing Templates"
@@ -1715,9 +1711,9 @@ msgstr "Failed to fire the notification."
 msgid "Failed to import template"
 msgstr "Failed to import template"
 
-#: src/pages/CollectionsListPage.tsx
-msgid "Failed to initiate collection handling."
-msgstr "Failed to initiate collection handling."
+#: src/components/Collection/TriggerCollectionActionsButton.tsx
+msgid "Failed to initiate rule actions."
+msgstr "Failed to initiate rule actions."
 
 #: src/pages/RulesListPage.tsx
 msgid "Failed to initiate rule execution."
@@ -1949,10 +1945,6 @@ msgstr "Go To Overview"
 msgid "Got it"
 msgstr "Got it"
 
-#: src/components/Collection/CollectionOverview/index.tsx
-msgid "Handle Collections"
-msgstr "Handle Collections"
-
 #: src/components/Collection/CollectionItem/index.tsx
 msgid "Handled by rule: ''{ruleName}''"
 msgstr "Handled by rule: ''{ruleName}''"
@@ -2071,9 +2063,13 @@ msgstr "Includes recorded plays that were not completed."
 msgid "Info"
 msgstr "Info"
 
-#: src/pages/CollectionsListPage.tsx
-msgid "Initiated collection handling in the background."
-msgstr "Initiated collection handling in the background."
+#: src/components/Collection/TriggerCollectionActionsButton.tsx
+msgid "Initiated rule actions for due items in {collectionTitle} in the background."
+msgstr "Initiated rule actions for due items in {collectionTitle} in the background."
+
+#: src/components/Collection/TriggerCollectionActionsButton.tsx
+msgid "Initiated rule actions for due items in all active collections in the background."
+msgstr "Initiated rule actions for due items in all active collections in the background."
 
 #: src/components/Rules/RuleGroup/AddModal/index.tsx
 msgid "Invalid action"
@@ -3397,6 +3393,14 @@ msgstr "Run the collection action"
 msgid "Running"
 msgstr "Running"
 
+#: src/components/Collection/TriggerCollectionActionsButton.tsx
+msgid "Runs configured rule actions only on due items in {collectionTitle}, respecting countdowns, exclusions, and active playback protection."
+msgstr "Runs configured rule actions only on due items in {collectionTitle}, respecting countdowns, exclusions, and active playback protection."
+
+#: src/components/Collection/TriggerCollectionActionsButton.tsx
+msgid "Runs configured rule actions only on due items in all active collections, respecting countdowns, exclusions, and active playback protection."
+msgstr "Runs configured rule actions only on due items in all active collections, respecting countdowns, exclusions, and active playback protection."
+
 #: src/components/Rules/RuleGroup/AddModal/index.tsx
 msgid "Save"
 msgstr "Save"
@@ -3421,6 +3425,10 @@ msgstr "Save first to enable poster upload."
 #: src/pages/OverlayTemplateEditorPage.tsx
 msgid "Save preset as a copy"
 msgstr "Save preset as a copy"
+
+#: src/components/Collection/TriggerCollectionActionsButton.tsx
+msgid "Save this collection before triggering rule actions."
+msgstr "Save this collection before triggering rule actions."
 
 #: src/components/Settings/Metadata/index.tsx
 msgid "Save to refresh"
@@ -4266,6 +4274,10 @@ msgstr "They are removed from every collection they are currently in as well."
 msgid "This analytics snapshot expired. Retry to restart from the first page."
 msgstr "This analytics snapshot expired. Retry to restart from the first page."
 
+#: src/components/Collection/TriggerCollectionActionsButton.tsx
+msgid "This collection is inactive. Activate it to trigger rule actions."
+msgstr "This collection is inactive. Activate it to trigger rule actions."
+
 #: src/components/Settings/Telemetry/index.tsx
 msgid "This is the exact report your server would send, stored only as anonymous counters."
 msgstr "This is the exact report your server would send, stored only as anonymous counters."
@@ -4409,6 +4421,18 @@ msgstr "Trigger now"
 #: src/components/Collection/CollectionDetail/TriggerRuleActionButton/index.tsx
 msgid "Trigger Rule Action"
 msgstr "Trigger Rule Action"
+
+#: src/components/Collection/TriggerCollectionActionsButton.tsx
+msgid "Trigger Rule Actions"
+msgstr "Trigger Rule Actions"
+
+#: src/components/Collection/TriggerCollectionActionsButton.tsx
+msgid "Trigger rule actions for due items in {collectionTitle}"
+msgstr "Trigger rule actions for due items in {collectionTitle}"
+
+#: src/components/Collection/TriggerCollectionActionsButton.tsx
+msgid "Trigger rule actions for due items in all active collections"
+msgstr "Trigger rule actions for due items in all active collections"
 
 #: src/components/Collection/CollectionDetail/TriggerRuleActionButton/index.tsx
 msgid "Triggering..."

@@ -72,6 +72,12 @@ import {
 // stay within a browser's patience.
 const POSTPONE_LOCK_WAIT_MS = 30000;
 
+export const collectionHandleIdSchema = z.coerce
+  .number()
+  .int()
+  .positive()
+  .max(Number.MAX_SAFE_INTEGER);
+
 const collectionMediaSortQuerySchema = z
   .enum(collectionMediaSortFields)
   .optional();
@@ -349,6 +355,24 @@ export class CollectionsController {
           error,
         ),
       );
+  }
+
+  @Post('/:id/handle')
+  async handleSingleCollection(
+    @Param('id', new ZodValidationPipe(collectionHandleIdSchema)) id: number,
+  ): Promise<void> {
+    if (!(await this.collectionService.getCollectionRecord(id))) {
+      throw new NotFoundException('Collection not found');
+    }
+    // Check after the lookup so a concurrent request that started while we
+    // were reading cannot be accepted as a second handler run.
+    if (this.collectionWorkerService.isRunning()) {
+      throw new ConflictException('The collection handler is already running');
+    }
+    this.collectionWorkerService.executeForCollection(id).catch((error) => {
+      this.logger.error('Failed to start collection handler execution');
+      this.logger.debug(error);
+    });
   }
 
   @Put('/schedule/update')

@@ -33,6 +33,13 @@ class TestTask extends TaskBase {
     this.taskCompleted = true;
   }
 
+  public executeCaptured(
+    task: (signal: AbortSignal) => Promise<void>,
+    controller?: AbortController,
+  ): Promise<void> {
+    return this.executeWith(task, controller);
+  }
+
   public onBootstrapHook(): void {
     this.hasBootstraped = true;
   }
@@ -152,5 +159,32 @@ describe('TaskBase', () => {
       'Test Task',
       '0 0 * * *',
     );
+  });
+
+  it('runs a captured body through the same signal and running lifecycle', async () => {
+    const abort = new AbortController();
+    const body = jest.fn().mockResolvedValue(undefined);
+    await task.executeCaptured(body, abort);
+    expect(body).toHaveBeenCalledWith(abort.signal);
+    expect(tasksService.setRunning).toHaveBeenCalledWith('Test Task');
+    expect(tasksService.clearRunning).toHaveBeenCalledWith('Test Task');
+    expect(task.taskCompleted).toBe(false);
+  });
+
+  it('clears running state when a captured body rejects', async () => {
+    const failure = new Error('Captured task failed');
+    await expect(
+      task.executeCaptured(jest.fn().mockRejectedValue(failure)),
+    ).rejects.toThrow(failure);
+    expect(tasksService.clearRunning).toHaveBeenCalledWith('Test Task');
+  });
+
+  it('does not run a captured body with an already aborted signal', async () => {
+    const abort = new AbortController();
+    abort.abort();
+    const body = jest.fn();
+    await expect(task.executeCaptured(body, abort)).rejects.toThrow();
+    expect(body).not.toHaveBeenCalled();
+    expect(tasksService.clearRunning).toHaveBeenCalledWith('Test Task');
   });
 });

@@ -54,6 +54,21 @@ export const fetchCollection = async (collectionId: string | number) => {
   )
 }
 
+export const triggerCollectionActions = async (collectionId?: number) => {
+  if (
+    collectionId !== undefined &&
+    (!Number.isSafeInteger(collectionId) || collectionId <= 0)
+  ) {
+    throw new Error('A positive collection ID is required.')
+  }
+  return await PostApiHandler(
+    collectionId === undefined
+      ? '/collections/handle'
+      : `/collections/${collectionId}/handle`,
+    {},
+  )
+}
+
 export const triggerCollectionItemAction = async (
   collectionId: number,
   mediaId: string | number,

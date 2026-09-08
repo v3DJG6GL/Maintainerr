@@ -1,7 +1,7 @@
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Mocked, TestBed } from '@suites/unit';
-import { Repository } from 'typeorm';
+import { FindOperator, Repository } from 'typeorm';
 import { MaintainerrEvent } from '@maintainerr/contracts';
 import {
   createCollection,
@@ -573,6 +573,220 @@ describe('CollectionWorkerService', () => {
     );
     expect(logger.log).toHaveBeenCalledWith(
       'Collection handler summary: 2 total (isActive), 0 skipped (Do Nothing), 0 skipped (no window set), 2 skipped (no due media), 0 queued for handling',
+    );
+  });
+
+  describe('handling one collection', () => {
+    const arrangeScope = () => {
+      const selected = createCollection({
+        id: 1,
+        isActive: true,
+        title: 'Selected Collection',
+        arrAction: ServarrAction.DELETE,
+        deleteAfterDays: 30,
+      });
+      const unrelated = createCollection({
+        id: 2,
+        isActive: true,
+        title: 'Unrelated Collection',
+        arrAction: ServarrAction.DELETE,
+        deleteAfterDays: 30,
+      });
+      const collections = [selected, unrelated];
+      const members = collections.map((collection) =>
+        createCollectionMedia(collection, {
+          mediaServerId: `due-${collection.id}`,
+          addDate: new Date('2000-01-01'),
+          ruleEvaluationFailed: false,
+        }),
+      );
+      collectionRepository.find.mockImplementation(async (options) => {
+        const where = options?.where as
+          { id?: number; isActive?: boolean } | undefined;
+        return collections.filter(
+          (collection) =>
+            (where?.id === undefined || collection.id === where.id) &&
+            (where?.isActive === undefined ||
+              collection.isActive === where.isActive),
+        );
+      });
+      collectionMediaRepository.find.mockImplementation(async (options) => {
+        const where = options?.where as {
+          collectionId: number;
+          addDate: FindOperator<Date>;
+        };
+        return members.filter(
+          (member) =>
+            member.collectionId === where.collectionId &&
+            member.addDate <= where.addDate.value,
+        );
+      });
+      collectionHandler.handleMedia.mockResolvedValue('handled');
+      settings.seerrConfigured.mockReturnValue(false);
+      return { selected, unrelated, members };
+    };
+
+    it('handles only selected due members, emits scoped totals, then leaves a subsequent global run global', async () => {
+      const { selected, unrelated, members } = arrangeScope();
+      await collectionWorkerService.executeForCollection(selected.id);
+      expect(collectionRepository.find).toHaveBeenNthCalledWith(1, {
+        where: { id: selected.id, isActive: true },
+      });
+      expect(collectionHandler.handleMedia).toHaveBeenCalledTimes(1);
+      expect(collectionHandler.handleMedia).toHaveBeenCalledWith(
+        selected,
+        members[0],
+      );
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        MaintainerrEvent.CollectionHandler_Started,
+        expect.objectContaining({
+          message: 'Started handling of collection 1',
+        }),
+      );
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        MaintainerrEvent.CollectionHandler_Progressed,
+        expect.objectContaining({ totalCollections: 1, totalMediaToHandle: 1 }),
+      );
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        MaintainerrEvent.CollectionMedia_Handled,
+        expect.objectContaining({
+          identifier: { type: 'collection', value: selected.id },
+        }),
+      );
+      collectionHandler.handleMedia.mockClear();
+      await collectionWorkerService.execute();
+      expect(collectionHandler.handleMedia).toHaveBeenCalledTimes(2);
+      expect(collectionHandler.handleMedia).toHaveBeenCalledWith(
+        unrelated,
+        members[1],
+      );
+    });
+
+    it('preserves deadlines, failed evaluation, exclusion and playing protections without forcing action', async () => {
+      const { selected, members } = arrangeScope();
+      members.push(
+        createCollectionMedia(selected, {
+          mediaServerId: 'future',
+          addDate: new Date('2099-01-01'),
+        }),
+      );
+      members.push(
+        createCollectionMedia(selected, {
+          mediaServerId: 'failed-rule',
+          addDate: new Date('2000-01-01'),
+          includedByRule: true,
+          manualMembershipSource: null,
+          ruleEvaluationFailed: true,
+        }),
+      );
+      members.push(
+        createCollectionMedia(selected, {
+          mediaServerId: 'excluded',
+          addDate: new Date('2000-01-01'),
+          ruleEvaluationFailed: false,
+        }),
+      );
+      members.push(
+        createCollectionMedia(selected, {
+          mediaServerId: 'playing',
+          addDate: new Date('2000-01-01'),
+          ruleEvaluationFailed: false,
+        }),
+      );
+      exclusionRepository.find.mockResolvedValue([
+        { mediaServerId: 'excluded', ruleGroupId: null },
+      ] as Exclusion[]);
+      const server = await mediaServerFactory.verifyConnection();
+      jest
+        .spyOn(server, 'getActiveSessions')
+        .mockResolvedValue(new Set(['playing']));
+      await collectionWorkerService.executeForCollection(selected.id);
+      expect(collectionHandler.handleMedia).toHaveBeenCalledTimes(1);
+      expect(collectionHandler.handleMedia).toHaveBeenCalledWith(
+        selected,
+        members[0],
+      );
+      expect(collectionMediaRepository.find).toHaveBeenCalledWith({
+        where: { collectionId: selected.id, addDate: expect.any(FindOperator) },
+      });
+    });
+
+    it.each(['inactive', 'no deadline', 'do nothing'] as const)(
+      'preserves the %s skip for scoped handling',
+      async (condition) => {
+        const { selected } = arrangeScope();
+        if (condition === 'inactive') selected.isActive = false;
+        if (condition === 'no deadline') selected.deleteAfterDays = null;
+        if (condition === 'do nothing')
+          selected.arrAction = ServarrAction.DO_NOTHING;
+        await collectionWorkerService.executeForCollection(selected.id);
+        expect(collectionHandler.handleMedia).not.toHaveBeenCalled();
+        expect(collectionMediaRepository.find).not.toHaveBeenCalled();
+      },
+    );
+
+    it('captures the requested ID while waiting for the shared execution lock and rejects overlapping work', async () => {
+      const { selected, members } = arrangeScope();
+      let releaseLock!: (release: () => void) => void;
+      const lock = new Promise<() => void>((resolve) => {
+        releaseLock = resolve;
+      });
+      const release = jest.fn();
+      executionLock.acquire.mockReturnValueOnce(lock);
+      let running = false;
+      taskService.isRunning.mockImplementation(() => running);
+      taskService.setRunning.mockImplementation(() => {
+        running = true;
+      });
+      taskService.clearRunning.mockImplementation(() => {
+        running = false;
+      });
+      const pending = collectionWorkerService.executeForCollection(selected.id);
+      expect(running).toBe(true);
+      expect(collectionHandler.handleMedia).not.toHaveBeenCalled();
+      await collectionWorkerService.executeForCollection(2);
+      await collectionWorkerService.execute();
+      expect(executionLock.acquire).toHaveBeenCalledTimes(1);
+      releaseLock(release);
+      await pending;
+      expect(collectionHandler.handleMedia).toHaveBeenCalledTimes(1);
+      expect(collectionHandler.handleMedia).toHaveBeenCalledWith(
+        selected,
+        members[0],
+      );
+      expect(release).toHaveBeenCalledTimes(1);
+      expect(running).toBe(false);
+    });
+
+    it('does not handle media after cancellation while waiting for the execution lock', async () => {
+      arrangeScope();
+      let releaseLock!: (release: () => void) => void;
+      executionLock.acquire.mockReturnValueOnce(
+        new Promise((resolve) => {
+          releaseLock = resolve;
+        }),
+      );
+      const abort = new AbortController();
+      const pending = collectionWorkerService.executeForCollection(1, abort);
+      abort.abort();
+      const release = jest.fn();
+      releaseLock(release);
+      await pending;
+      expect(collectionHandler.handleMedia).not.toHaveBeenCalled();
+      expect(release).toHaveBeenCalledTimes(1);
+      expect(taskService.clearRunning).toHaveBeenCalledWith(
+        'Collection Handler',
+      );
+    });
+
+    it.each([0, -1, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1])(
+      'rejects invalid scoped ID %s before acquiring the lock',
+      async (id) => {
+        await expect(
+          collectionWorkerService.executeForCollection(id),
+        ).rejects.toBeInstanceOf(RangeError);
+        expect(executionLock.acquire).not.toHaveBeenCalled();
+      },
     );
   });
 });

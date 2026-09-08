@@ -6,6 +6,7 @@ interface IExecuteButton {
   onClick: () => void
   executing?: boolean
   disabled?: boolean
+  ariaLabel?: string
   title?: string
   /** Pass `mx-0` where the row places the button itself, as AddButton takes it. */
   className?: string
@@ -15,6 +16,8 @@ const ExecuteButton = (props: IExecuteButton) => {
   return (
     <button
       className={`edit-button m-auto flex h-9 rounded-md text-zinc-200 shadow-md ${props.className ?? ''}`.trim()}
+      type="button"
+      aria-label={props.ariaLabel}
       onClick={props.onClick}
       disabled={props.disabled}
       title={props.title}

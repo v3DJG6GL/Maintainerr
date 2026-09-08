@@ -71,6 +71,17 @@ export abstract class TaskBase
   protected onBootstrapHook() {}
 
   public async execute(abortController?: AbortController) {
+    return this.executeWith(
+      (signal) => this.executeTask(signal),
+      abortController,
+    );
+  }
+
+  /** Run a captured task body through the same running and abort lifecycle. */
+  protected async executeWith(
+    task: (signal: AbortSignal) => Promise<void>,
+    abortController?: AbortController,
+  ): Promise<void> {
     if (this.isRunning()) {
       this.logger.log(
         `Another instance of the ${this.name} task is currently running. Skipping this execution`,
@@ -83,7 +94,7 @@ export abstract class TaskBase
 
     try {
       abortController?.signal.throwIfAborted();
-      await this.executeTask(this.abortController.signal);
+      await task(this.abortController.signal);
     } finally {
       this.abortController = undefined;
       this.taskService.clearRunning(this.name);

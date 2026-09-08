@@ -44,6 +44,12 @@ const buildRuleGroup = (overrides: Partial<IRuleGroup> = {}): IRuleGroup => ({
   ...overrides,
 })
 
+vi.mock('../components/Collection/TriggerCollectionActionsButton', () => ({
+  default: ({ collection }: { collection: ICollection }) => (
+    <button data-collection-id={collection.id}>Trigger Rule Actions</button>
+  ),
+}))
+
 vi.mock('../api/collections', () => ({
   useCollection: vi.fn(),
 }))
@@ -118,6 +124,11 @@ describe('CollectionDetailPage', () => {
     render(<CollectionDetailPage />)
 
     expect(screen.getByText('Regression Test Collection')).toBeTruthy()
+    expect(
+      screen
+        .getByRole('button', { name: 'Trigger Rule Actions' })
+        .getAttribute('data-collection-id'),
+    ).toBe('42')
     expect(screen.getByTestId('tabbed-links')).toBeTruthy()
     expect(screen.getByTestId('collection-detail-outlet')).toBeTruthy()
   })
