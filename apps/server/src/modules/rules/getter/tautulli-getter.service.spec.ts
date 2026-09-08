@@ -65,6 +65,62 @@ const showItem: MediaItem = createMediaItem({ type: 'show', id: '1' });
 const ruleGroup = { collection: { id: 1 } } as RuleGroupDto;
 
 describe('TautulliGetterService', () => {
+  describe('aggregate watch time', () => {
+    it.each([
+      ['movie', 'rating_key'],
+      ['episode', 'rating_key'],
+      ['season', 'parent_rating_key'],
+      ['show', 'grandparent_rating_key'],
+    ])(
+      'uses persisted %s history across all users',
+      async (media_type, key) => {
+        const api = {
+          getMetadata: jest
+            .fn()
+            .mockResolvedValue({ media_type, rating_key: '1' }),
+          getHistory: jest.fn().mockResolvedValue([
+            { user_id: 1, play_duration: 89, watched_status: 1 },
+            { user_id: 2, duration: 89, watched_status: 0 },
+          ]),
+        };
+        const service = new TautulliGetterService(
+          api as unknown as TautulliApiService,
+          {} as PlexApiService,
+          {} as Repository<Collection>,
+          createMockLogger(),
+        );
+        expect(await service.get(13, showItem)).toBe(3);
+        expect(api.getHistory).toHaveBeenCalledWith({
+          [key]: '1',
+          include_activity: 0,
+        });
+      },
+    );
+
+    it.each([
+      { history: null },
+      { history: [{ play_duration: null }] },
+      { history: [{ play_duration: -1 }] },
+    ])(
+      'skips unavailable history or durations: $history',
+      async ({ history }) => {
+        const api = {
+          getMetadata: jest
+            .fn()
+            .mockResolvedValue({ media_type: 'movie', rating_key: '1' }),
+          getHistory: jest.fn().mockResolvedValue(history),
+        };
+        const service = new TautulliGetterService(
+          api as unknown as TautulliApiService,
+          {} as PlexApiService,
+          {} as Repository<Collection>,
+          createMockLogger(),
+        );
+        expect(await service.get(13, showItem)).toBeUndefined();
+      },
+    );
+  });
+
   describe('seenBy', () => {
     const watchedPlay = historyItem({
       watched_status: 1,

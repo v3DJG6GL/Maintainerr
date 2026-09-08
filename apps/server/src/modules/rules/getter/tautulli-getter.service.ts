@@ -58,6 +58,19 @@ export class TautulliGetterService {
       if (!metadata) {
         return undefined;
       }
+      // A historical total must not depend on Tautulli's UI activity setting.
+      if (prop?.name === 'watchTime') {
+        const history = await this.getHistoryForMetadata(metadata, false);
+        let seconds = 0;
+        for (const item of history) {
+          const duration = item.play_duration ?? item.duration;
+          if (duration == null || !Number.isFinite(duration) || duration < 0) {
+            return undefined;
+          }
+          seconds += duration;
+        }
+        return Number.isFinite(seconds) ? Math.round(seconds / 60) : undefined;
+      }
       const collection = await this.collectionRepository.findOne({
         where: { id: ruleGroup.collection.id },
       });
@@ -316,8 +329,12 @@ export class TautulliGetterService {
     return lastStopped > 0 ? new Date(lastStopped * 1000) : null;
   }
 
-  private async getHistoryForMetadata(metadata: TautulliMetadata) {
-    const options: TautulliHistoryRequestOptions = {};
+  private async getHistoryForMetadata(
+    metadata: TautulliMetadata,
+    includeActivity?: boolean,
+  ) {
+    const options: TautulliHistoryRequestOptions =
+      includeActivity === false ? { include_activity: 0 } : {};
 
     if (metadata.media_type == 'movie' || metadata.media_type == 'episode') {
       options.rating_key = metadata.rating_key;

@@ -49,7 +49,7 @@ export class StreamystatsGetterService {
         return await this.getUserStat(prop.name, libItem, currentRule);
       }
 
-      if (prop.name === 'lastPlayedAt') {
+      if (prop.name === 'lastPlayedAt' || prop.name === 'watchTime') {
         if (libItem.type === 'season') {
           return null;
         }
@@ -61,7 +61,11 @@ export class StreamystatsGetterService {
           return undefined;
         }
 
-        return details.lastWatched ? new Date(details.lastWatched) : null;
+        return prop.name === 'watchTime'
+          ? Math.round(details.totalWatchTime / 60)
+          : details.lastWatched
+            ? new Date(details.lastWatched)
+            : null;
       }
 
       const membership = await this.streamystatsApi.getWatchlistMembership();

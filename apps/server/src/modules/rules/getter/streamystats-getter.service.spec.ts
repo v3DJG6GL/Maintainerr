@@ -26,27 +26,26 @@ const itemDetailsOf = (
     lastWatched: string | null;
   }[],
   lastWatched: string | null = null,
-) =>
-  ({
-    item: { id: 'item-1' },
-    totalViews: 0,
-    totalWatchTime: 0,
-    completionRate: 0,
-    firstWatched: null,
-    lastWatched,
-    watchHistory: [],
-    watchCountByMonth: [],
-    usersWatched: usersWatched.map(
-      ({ id, name, watchCount, totalWatchTime, lastWatched }) => ({
-        user: { id, name },
-        watchCount,
-        totalWatchTime,
-        completionRate: 0,
-        firstWatched: null,
-        lastWatched,
-      }),
-    ),
-  }) as never;
+) => ({
+  item: { id: 'item-1' },
+  totalViews: 0,
+  totalWatchTime: 0,
+  completionRate: 0,
+  firstWatched: null,
+  lastWatched,
+  watchHistory: [],
+  watchCountByMonth: [],
+  usersWatched: usersWatched.map(
+    ({ id, name, watchCount, totalWatchTime, lastWatched }) => ({
+      user: { id, name },
+      watchCount,
+      totalWatchTime,
+      completionRate: 0,
+      firstWatched: null,
+      lastWatched,
+    }),
+  ),
+});
 
 const membershipOf = (
   entries: Record<string, string[]>,
@@ -85,16 +84,38 @@ describe('StreamystatsGetterService', () => {
     return { service, streamystatsApi, mediaServerFactory, getMetadata };
   };
 
-  it.each([LAST_PLAYED_AT_PROP_ID])(
-    'guards season operand %s even outside the editor',
-    async (id) => {
+  describe('aggregate watch time', () => {
+    it('uses the total independently of visible users and rounds only once', async () => {
+      const { service, streamystatsApi, mediaServerFactory } = createService();
+      streamystatsApi.getItemDetails.mockResolvedValue({
+        ...itemDetailsOf([]),
+        totalWatchTime: 179,
+      });
+      expect(await service.get(8, createMediaItem({ type: 'movie' }))).toBe(3);
+      expect(mediaServerFactory.getService).not.toHaveBeenCalled();
+      expect(streamystatsApi.getWatchlistMembership).not.toHaveBeenCalled();
+    });
+
+    it('keeps confirmed zero separate from an unavailable read', async () => {
       const { service, streamystatsApi } = createService();
-      expect(
-        await service.get(id, createMediaItem({ type: 'season' })),
-      ).toBeNull();
-      expect(streamystatsApi.getItemDetails).not.toHaveBeenCalled();
-    },
-  );
+      const item = createMediaItem({ type: 'show' });
+      streamystatsApi.getItemDetails.mockResolvedValue(itemDetailsOf([]));
+      expect(await service.get(8, item)).toBe(0);
+      streamystatsApi.getItemDetails.mockResolvedValue(null);
+      expect(await service.get(8, item)).toBeUndefined();
+    });
+
+    it.each([8, LAST_PLAYED_AT_PROP_ID])(
+      'guards season operand %s even outside the editor',
+      async (id) => {
+        const { service, streamystatsApi } = createService();
+        expect(
+          await service.get(id, createMediaItem({ type: 'season' })),
+        ).toBeNull();
+        expect(streamystatsApi.getItemDetails).not.toHaveBeenCalled();
+      },
+    );
+  });
 
   it.each([
     WATCHLISTED_BY_USERS_PROP_ID,

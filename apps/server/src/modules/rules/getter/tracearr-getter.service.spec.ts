@@ -146,6 +146,44 @@ describe('TracearrGetterService', () => {
     addedAt: new Date('2026-01-02T00:00:00.000Z'),
   });
 
+  describe('aggregate watch time', () => {
+    it('sums all users and unfinished plays without username resolution', async () => {
+      const { service, tracearrApi } = createService([
+        historyItem('a', { duration_ms: 149000 }),
+        historyItem('b', {
+          duration_ms: 149000,
+          watched: false,
+          user: { id: 'other' },
+        }),
+      ]);
+      expect(await service.get(13, show, ruleGroup)).toBe(5);
+      expect(tracearrApi.getUsernamesByTracearrUserId).not.toHaveBeenCalled();
+    });
+
+    it.each([undefined, null, -1, Number.NaN])(
+      'skips an incomplete duration %s',
+      async (duration_ms) => {
+        const { service } = createService([historyItem('a', { duration_ms })]);
+        expect(await service.get(13, show, ruleGroup)).toBeUndefined();
+      },
+    );
+
+    it('isolates a season and preserves a confirmed zero', async () => {
+      const { service } = createService([
+        historyItem('a', { season_number: 0, duration_ms: 60000 }),
+        historyItem('b', { season_number: 1, duration_ms: 120000 }),
+      ]);
+      const season = createMediaItem({
+        type: 'season',
+        parentId: 'show-1',
+        index: 0,
+        addedAt: movie.addedAt,
+      });
+      expect(await service.get(13, season, ruleGroup)).toBe(1);
+      expect(await service.get(13, movie, ruleGroup)).toBe(0);
+    });
+  });
+
   describe('per-user properties', () => {
     const OTHER_USER_ID = '44444444-4444-4444-8444-444444444444';
     const rule = { username: 'alice' } as never;

@@ -101,6 +101,8 @@ export class TracearrGetterService {
       }
 
       switch (property.name) {
+        case 'watchTime':
+          return this.getWatchTime(history);
         case 'seenBy':
         case 'sw_watchers':
           return await this.getUsernames(watchedHistory);
