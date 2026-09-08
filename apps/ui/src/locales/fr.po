@@ -372,6 +372,10 @@ msgstr "À propos de Maintainerr"
 msgid "Action"
 msgstr "Action"
 
+#: src/components/Collection/TriggerCollectionActionsButton.tsx
+msgid "Action for each item: <0>{actionSummary}</0>."
+msgstr ""
+
 #: src/components/Collection/CollectionItem/index.tsx
 #: src/components/Rules/RuleGroup/AddModal/index.tsx
 #: src/components/Rules/RuleGroup/index.tsx
@@ -1058,6 +1062,10 @@ msgstr "Le nombre est supérieur à"
 msgid "Count Is Smaller Than"
 msgstr "Le nombre est inférieur à"
 
+#: src/components/Collection/TriggerCollectionActionsButton.tsx
+msgid "Countdowns will be ignored. Exclusions, active playback protection, failed rule evaluation safeguards, and the collection's active status will still be respected."
+msgstr ""
+
 #: src/components/StorageMetrics/index.tsx
 msgid "Cumulative count of media items Maintainerr has handled across all collections, with the on-disk space reclaimed by delete-style actions. Unmonitor and quality-change actions do not contribute to bytes reclaimed."
 msgstr "Nombre cumulé d'éléments multimédias traités par Maintainerr dans toutes les collections, avec l'espace disque récupéré par les actions de suppression. Les actions de désurveillance et de changement de qualité ne contribuent pas à l'espace récupéré."
@@ -1712,8 +1720,8 @@ msgid "Failed to import template"
 msgstr "Échec de l'importation du modèle"
 
 #: src/components/Collection/TriggerCollectionActionsButton.tsx
-msgid "Failed to initiate rule actions."
-msgstr ""
+msgid "Failed to initiate collection handling."
+msgstr "Échec du démarrage de la gestion des collections."
 
 #: src/pages/RulesListPage.tsx
 msgid "Failed to initiate rule execution."
@@ -1806,6 +1814,10 @@ msgstr "Échec du changement de serveur multimédia"
 #: src/components/Collection/CollectionDetail/TestMediaItem/index.tsx
 msgid "Failed to test media"
 msgstr "Échec du test du média"
+
+#: src/components/Collection/TriggerCollectionActionsButton.tsx
+msgid "Failed to trigger rule actions for this collection."
+msgstr ""
 
 #: src/components/Collection/CollectionDetail/TriggerRuleActionButton/index.tsx
 msgid "Failed to trigger the collection action for this item."
@@ -1945,6 +1957,10 @@ msgstr "Aller à l'aperçu"
 msgid "Got it"
 msgstr "Compris"
 
+#: src/components/Collection/TriggerCollectionActionsButton.tsx
+msgid "Handle Collections"
+msgstr "Gérer les collections"
+
 #: src/components/Collection/CollectionItem/index.tsx
 msgid "Handled by rule: ''{ruleName}''"
 msgstr "Traité par la règle : « {ruleName} »"
@@ -2064,11 +2080,11 @@ msgid "Info"
 msgstr "Info"
 
 #: src/components/Collection/TriggerCollectionActionsButton.tsx
-msgid "Initiated rule actions for due items in {collectionTitle} in the background."
-msgstr ""
+msgid "Initiated collection handling in the background."
+msgstr "Gestion des collections initiée en arrière-plan."
 
 #: src/components/Collection/TriggerCollectionActionsButton.tsx
-msgid "Initiated rule actions for due items in all active collections in the background."
+msgid "Initiated rule actions for {collectionTitle} in the background, bypassing countdowns."
 msgstr ""
 
 #: src/components/Rules/RuleGroup/AddModal/index.tsx
@@ -2095,6 +2111,10 @@ msgstr "Éléments"
 #: src/components/StorageMetrics/index.tsx
 msgid "Items handled"
 msgstr "Éléments traités"
+
+#: src/components/Collection/TriggerCollectionActionsButton.tsx
+msgid "Items whose actions succeed will be removed from the collection right away. Processing continues in the background."
+msgstr ""
 
 #: src/components/Settings/MediaServerSelector/index.tsx
 msgid "Jellyfin Media Server"
@@ -3394,10 +3414,6 @@ msgid "Running"
 msgstr "En cours"
 
 #: src/components/Collection/TriggerCollectionActionsButton.tsx
-msgid "Runs configured rule actions only on due items in {collectionTitle}, respecting countdowns, exclusions, and active playback protection."
-msgstr ""
-
-#: src/components/Collection/TriggerCollectionActionsButton.tsx
 msgid "Runs configured rule actions only on due items in all active collections, respecting countdowns, exclusions, and active playback protection."
 msgstr ""
 
@@ -3425,10 +3441,6 @@ msgstr "Enregistrez d'abord pour activer le téléversement d'affiche."
 #: src/pages/OverlayTemplateEditorPage.tsx
 msgid "Save preset as a copy"
 msgstr "Enregistrer le préréglage comme copie"
-
-#: src/components/Collection/TriggerCollectionActionsButton.tsx
-msgid "Save this collection before triggering rule actions."
-msgstr ""
 
 #: src/components/Settings/Metadata/index.tsx
 msgid "Save to refresh"
@@ -4274,10 +4286,6 @@ msgstr "Ils sont également retirés de toutes les collections dans lesquelles i
 msgid "This analytics snapshot expired. Retry to restart from the first page."
 msgstr ""
 
-#: src/components/Collection/TriggerCollectionActionsButton.tsx
-msgid "This collection is inactive. Activate it to trigger rule actions."
-msgstr ""
-
 #: src/components/Settings/Telemetry/index.tsx
 msgid "This is the exact report your server would send, stored only as anonymous counters."
 msgstr "Voici exactement le rapport que votre serveur enverrait, stocké uniquement sous forme de compteurs anonymes."
@@ -4293,6 +4301,10 @@ msgstr "Ce serveur est actuellement utilisé par les règles suivantes :"
 #: src/components/Collection/CollectionDetail/TriggerRuleActionButton/index.tsx
 msgid "This will immediately run the collection action for this item:<0> {actionSummary}</0>."
 msgstr "Cela exécutera immédiatement l'action de collection pour cet élément :<0> {actionSummary}</0>."
+
+#: src/components/Collection/TriggerCollectionActionsButton.tsx
+msgid "This will immediately run the configured action for eligible items in <0>{collectionTitle}</0>, across all pages."
+msgstr ""
 
 #: src/components/Settings/Overlays/index.tsx
 msgid "This will revert every applied overlay and restore the original posters for all collections."
@@ -4415,6 +4427,7 @@ msgid "Transform"
 msgstr "Transformer"
 
 #: src/components/Collection/CollectionDetail/TriggerRuleActionButton/index.tsx
+#: src/components/Collection/TriggerCollectionActionsButton.tsx
 msgid "Trigger now"
 msgstr "Déclencher maintenant"
 
@@ -4426,15 +4439,8 @@ msgstr "Déclencher l'action de règle"
 msgid "Trigger Rule Actions"
 msgstr ""
 
-#: src/components/Collection/TriggerCollectionActionsButton.tsx
-msgid "Trigger rule actions for due items in {collectionTitle}"
-msgstr ""
-
-#: src/components/Collection/TriggerCollectionActionsButton.tsx
-msgid "Trigger rule actions for due items in all active collections"
-msgstr ""
-
 #: src/components/Collection/CollectionDetail/TriggerRuleActionButton/index.tsx
+#: src/components/Collection/TriggerCollectionActionsButton.tsx
 msgid "Triggering..."
 msgstr "Déclenchement en cours..."
 

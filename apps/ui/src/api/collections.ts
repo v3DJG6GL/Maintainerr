@@ -64,7 +64,7 @@ export const triggerCollectionActions = async (collectionId?: number) => {
   return await PostApiHandler(
     collectionId === undefined
       ? '/collections/handle'
-      : `/collections/${collectionId}/handle`,
+      : `/collections/${collectionId}/trigger`,
     {},
   )
 }

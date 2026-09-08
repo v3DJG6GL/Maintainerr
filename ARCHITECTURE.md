@@ -109,7 +109,8 @@ integrations, and production static serving.
 - `src/modules/collections/` tracks matched media, exclusions, collection logs,
   posters, and collection handling actions.
   Scheduled, global manual, and per-collection action runs share the same
-  worker and due-item eligibility checks.
+  worker and eligibility checks. Confirmed per-collection triggers bypass only
+  the countdown; exclusions, playback and rule-evaluation safeguards still apply.
 - `src/modules/media-analytics/` composes media, collection and analytics APIs
   for source-specific browsing snapshots. It sorts complete snapshots before
   pagination and keeps native media-server collection ordering independent.

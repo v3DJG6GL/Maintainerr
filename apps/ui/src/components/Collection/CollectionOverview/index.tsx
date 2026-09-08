@@ -77,10 +77,6 @@ const CollectionOverview = (props: ICollectionOverview) => {
                   collection={col}
                   onClick={() => props.openDetail(col)}
                 />
-                <TriggerCollectionActionsButton
-                  collection={col}
-                  className="mt-3"
-                />
               </li>
             ))}
           </ul>

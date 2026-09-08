@@ -1,3 +1,4 @@
+import { ServarrAction } from '@maintainerr/contracts'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -15,15 +16,18 @@ import { PostApiHandler } from '../../utils/ApiHandler'
 import TriggerCollectionActionsButton from './TriggerCollectionActionsButton'
 
 vi.mock('../../utils/ApiHandler', () => ({ PostApiHandler: vi.fn() }))
+vi.mock('../../utils/ClientLogger', () => ({ logClientError: vi.fn() }))
 vi.mock('react-toastify', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }))
 
-const collection = { id: 42, title: 'Sample Collection', isActive: true }
-const scopedLabel = 'Trigger rule actions for due items in Sample Collection'
-const globalLabel =
-  'Trigger rule actions for due items in all active collections'
-
+const collection = {
+  id: 42,
+  title: 'Sample Collection',
+  isActive: true,
+  type: 'movie' as const,
+  arrAction: ServarrAction.DELETE,
+}
 const setup = (running = false, active = true) => {
   const client = createTestQueryClient()
   render(
@@ -41,29 +45,51 @@ const setup = (running = false, active = true) => {
   return client
 }
 
-afterEach(() => {
-  cleanup()
-})
+afterEach(cleanup)
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(PostApiHandler).mockResolvedValue({})
 })
 
+const openConfirmation = () =>
+  fireEvent.click(screen.getByRole('button', { name: 'Trigger Rule Actions' }))
+
 describe('TriggerCollectionActionsButton', () => {
-  it.each([
-    [globalLabel, '/collections/handle'],
-    [scopedLabel, '/collections/42/handle'],
-  ])('posts only the selected scope: %s', async (label, path) => {
+  it('keeps global Handle Collections on the due-item endpoint without confirmation', async () => {
     setup()
-    fireEvent.click(screen.getByRole('button', { name: label }))
-    await waitFor(() => expect(PostApiHandler).toHaveBeenCalledWith(path, {}))
-    await waitFor(() => expect(toast.success).toHaveBeenCalled())
-    expect(vi.mocked(toast.success).mock.calls[0][0]).toContain(
-      'in the background',
+    fireEvent.click(screen.getByRole('button', { name: 'Handle Collections' }))
+    await waitFor(() =>
+      expect(PostApiHandler).toHaveBeenCalledWith('/collections/handle', {}),
     )
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
-  it('blocks all buttons during acceptance and rejects duplicate clicks before rendering', async () => {
+  it('requires confirmation and explains countdown-only override before triggering all eligible members', async () => {
+    setup()
+    openConfirmation()
+    expect(PostApiHandler).not.toHaveBeenCalled()
+    expect(screen.getByText('Delete this movie')).toBeTruthy()
+    expect(
+      screen.getByText(/Countdowns will be ignored/).textContent,
+    ).toContain(
+      'Exclusions, active playback protection, failed rule evaluation safeguards',
+    )
+    expect(screen.getByText(/across all pages/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(PostApiHandler).not.toHaveBeenCalled()
+    openConfirmation()
+    fireEvent.click(screen.getByRole('button', { name: 'Trigger now' }))
+    await waitFor(() =>
+      expect(PostApiHandler).toHaveBeenCalledWith(
+        '/collections/42/trigger',
+        {},
+      ),
+    )
+    await waitFor(() => expect(toast.success).toHaveBeenCalled())
+    expect(PostApiHandler).toHaveBeenCalledTimes(1)
+  })
+
+  it('blocks duplicate submissions and the global handler during acceptance', async () => {
     let accept!: (value: unknown) => void
     vi.mocked(PostApiHandler).mockImplementation(
       () =>
@@ -72,81 +98,57 @@ describe('TriggerCollectionActionsButton', () => {
         }),
     )
     setup()
-    fireEvent.click(screen.getByRole('button', { name: scopedLabel }))
-    fireEvent.click(screen.getByRole('button', { name: globalLabel }))
+    openConfirmation()
+    const confirm = screen.getByRole('button', { name: 'Trigger now' })
+    fireEvent.click(confirm)
+    fireEvent.click(confirm)
     await waitFor(() => expect(PostApiHandler).toHaveBeenCalledTimes(1))
-    await waitFor(() =>
-      expect(
-        screen
-          .getByRole('button', { name: globalLabel })
-          .hasAttribute('disabled'),
-      ).toBe(true),
-    )
     expect(
       screen
-        .getByRole('button', { name: scopedLabel })
-        .hasAttribute('disabled'),
+        .getByText('Handle Collections')
+        .closest('button')
+        ?.hasAttribute('disabled'),
     ).toBe(true)
     accept({})
     await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1))
-    await waitFor(() =>
-      expect(
-        screen
-          .getByRole('button', { name: globalLabel })
-          .hasAttribute('disabled'),
-      ).toBe(false),
-    )
   })
 
-  it('keeps both controls disabled while the worker is running', () => {
+  it('disables controls while the worker runs and disables inactive collection triggers', () => {
     setup(true)
-    for (const button of screen.getAllByRole('button')) {
+    for (const button of screen.getAllByRole('button'))
       expect(button.hasAttribute('disabled')).toBe(true)
-      fireEvent.click(button)
-    }
-    expect(PostApiHandler).not.toHaveBeenCalled()
-  })
-
-  it('disables only the inactive collection and explains why', () => {
+    cleanup()
     setup(false, false)
     expect(
       screen
-        .getByRole('button', { name: scopedLabel })
+        .getByRole('button', { name: 'Trigger Rule Actions' })
         .hasAttribute('disabled'),
     ).toBe(true)
-    expect(screen.getByRole('button', { name: scopedLabel }).title).toContain(
-      'inactive',
-    )
     expect(
       screen
-        .getByRole('button', { name: globalLabel })
+        .getByRole('button', { name: 'Handle Collections' })
         .hasAttribute('disabled'),
     ).toBe(false)
   })
 
   it.each([409, 500])(
-    'shows failure feedback for HTTP %s without claiming completion',
+    'keeps HTTP %s failures in the confirmation for review without claiming success',
     async (status) => {
-      const error = new AxiosError('Request failed')
+      const error = new AxiosError('')
       Object.assign(error, { response: { status } })
       vi.mocked(PostApiHandler).mockRejectedValue(error)
       setup()
-      fireEvent.click(screen.getByRole('button', { name: scopedLabel }))
-      await waitFor(() =>
-        expect(toast.error).toHaveBeenCalledWith(
-          status === 409
-            ? 'Collection handling is already running.'
-            : 'Failed to initiate rule actions.',
-        ),
-      )
-      expect(toast.success).not.toHaveBeenCalled()
+      openConfirmation()
+      fireEvent.click(screen.getByRole('button', { name: 'Trigger now' }))
       await waitFor(() =>
         expect(
-          screen
-            .getByRole('button', { name: scopedLabel })
-            .hasAttribute('disabled'),
-        ).toBe(false),
+          screen.getByText(
+            'Failed to trigger rule actions for this collection.',
+          ),
+        ).toBeTruthy(),
       )
+      expect(toast.success).not.toHaveBeenCalled()
+      expect(screen.getByRole('dialog')).toBeTruthy()
     },
   )
 
@@ -156,14 +158,13 @@ describe('TriggerCollectionActionsButton', () => {
       <QueryClientProvider client={client}>
         <TaskStatusContext value={{}}>
           <TriggerCollectionActionsButton
-            collection={{ title: 'Unsaved', isActive: true }}
+            collection={{ ...collection, id: undefined }}
           />
         </TaskStatusContext>
       </QueryClientProvider>,
     )
-    const button = screen.getByRole('button')
-    expect(button.hasAttribute('disabled')).toBe(true)
-    fireEvent.click(button)
+    fireEvent.click(screen.getByRole('button'))
+    expect(screen.getByRole('button').hasAttribute('disabled')).toBe(true)
     expect(PostApiHandler).not.toHaveBeenCalled()
   })
 })

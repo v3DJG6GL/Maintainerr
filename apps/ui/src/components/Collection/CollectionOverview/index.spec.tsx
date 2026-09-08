@@ -21,7 +21,7 @@ vi.mock('../../Common/LibrarySwitcher', () => ({
 vi.mock('../TriggerCollectionActionsButton', () => ({
   default: ({ collection }: { collection?: { id: number } }) => (
     <button type="button" data-collection-id={collection?.id}>
-      Trigger Rule Actions
+      {collection ? 'Trigger Rule Actions' : 'Handle Collections'}
     </button>
   ),
 }))
@@ -83,7 +83,7 @@ describe('CollectionOverview', () => {
     )
   })
 
-  it('places the scoped action outside the collection link', () => {
+  it('shows only the global handler, without action controls on collection thumbnails', () => {
     const openDetail = vi.fn()
     render(
       <CollectionOverview
@@ -93,14 +93,12 @@ describe('CollectionOverview', () => {
         openDetail={openDetail}
       />,
     )
-    const buttons = screen.getAllByRole('button', {
-      name: 'Trigger Rule Actions',
-    })
-    const scoped = buttons.find(
-      (button) => button.getAttribute('data-collection-id') === '42',
-    )!
-    expect(scoped.closest('a')).toBe(null)
-    fireEvent.click(scoped)
+    expect(
+      screen.queryByRole('button', { name: 'Trigger Rule Actions' }),
+    ).toBeNull()
+    expect(
+      screen.getByRole('button', { name: 'Handle Collections' }),
+    ).toBeTruthy()
     expect(openDetail).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('link', { name: 'Sample Collection' }))
     expect(openDetail).toHaveBeenCalledTimes(1)

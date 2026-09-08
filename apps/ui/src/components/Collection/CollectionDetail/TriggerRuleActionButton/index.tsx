@@ -17,7 +17,9 @@ interface TriggerRuleActionButtonProps {
   buttonLabel?: string
 }
 
-const getActionSummary = (collection: ICollection) => {
+export const getActionSummary = (
+  collection: Pick<ICollection, 'type' | 'arrAction' | 'sportarrSettingsId'>,
+) => {
   // Sportarr-managed collections hold leagues/events rather than shows.
   const isSportarr = collection.sportarrSettingsId != null
   switch (collection.arrAction as ServarrAction) {

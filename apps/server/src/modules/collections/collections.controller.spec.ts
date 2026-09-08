@@ -49,6 +49,7 @@ describe('CollectionsController', () => {
     isRunning: jest.fn(),
     execute: jest.fn(),
     executeForCollection: jest.fn(),
+    triggerForCollection: jest.fn(),
   } as unknown as jest.Mocked<CollectionWorkerService>;
 
   const executionLock = {
@@ -702,71 +703,70 @@ describe('CollectionsController', () => {
     });
   });
 
-  describe('handle one collection', () => {
-    it.each(['0', '-1', '1.5', 'invalid', '9007199254740992'])(
-      'rejects invalid ID %s at the endpoint boundary',
-      (id) => {
-        expect(() =>
-          new ZodValidationPipe(collectionHandleIdSchema).transform(id, {
-            type: 'param',
+  describe.each(['handleSingleCollection', 'triggerSingleCollection'] as const)(
+    '%s',
+    (method) => {
+      const workerMethod =
+        method === 'handleSingleCollection'
+          ? 'executeForCollection'
+          : 'triggerForCollection';
+      it.each(['0', '-1', '1.5', 'invalid', '9007199254740992'])(
+        'rejects invalid ID %s at the endpoint boundary',
+        (id) => {
+          expect(() =>
+            new ZodValidationPipe(collectionHandleIdSchema).transform(id, {
+              type: 'param',
+            }),
+          ).toThrow();
+        },
+      );
+
+      it('starts only the selected collection in the background', async () => {
+        collectionsService.getCollectionRecord.mockResolvedValue(
+          createCollection({ id: 7 }),
+        );
+        collectionWorkerService[workerMethod].mockReturnValue(
+          new Promise(() => {}),
+        );
+        await controller[method](7);
+        expect(collectionWorkerService[workerMethod]).toHaveBeenCalledWith(7);
+        expect(collectionWorkerService.execute).not.toHaveBeenCalled();
+      });
+
+      it('returns 404 for a missing collection', async () => {
+        collectionsService.getCollectionRecord.mockResolvedValue(null);
+        await expect(controller[method](7)).rejects.toBeInstanceOf(
+          NotFoundException,
+        );
+        expect(collectionWorkerService[workerMethod]).not.toHaveBeenCalled();
+      });
+
+      it('returns 409 when a handler is already running', async () => {
+        collectionsService.getCollectionRecord.mockResolvedValue(
+          createCollection({ id: 7 }),
+        );
+        collectionWorkerService.isRunning.mockReturnValue(true);
+        await expect(controller[method](7)).rejects.toBeInstanceOf(
+          ConflictException,
+        );
+        expect(collectionWorkerService[workerMethod]).not.toHaveBeenCalled();
+      });
+
+      it('rechecks running status after the existence lookup before accepting another request', async () => {
+        let resolveLookup!: (
+          collection: ReturnType<typeof createCollection>,
+        ) => void;
+        collectionsService.getCollectionRecord.mockReturnValueOnce(
+          new Promise((resolve) => {
+            resolveLookup = resolve;
           }),
-        ).toThrow();
-      },
-    );
-
-    it('starts only the selected collection in the background', async () => {
-      collectionsService.getCollectionRecord.mockResolvedValue(
-        createCollection({ id: 7 }),
-      );
-      collectionWorkerService.executeForCollection.mockReturnValue(
-        new Promise(() => {}),
-      );
-      await controller.handleSingleCollection(7);
-      expect(collectionWorkerService.executeForCollection).toHaveBeenCalledWith(
-        7,
-      );
-      expect(collectionWorkerService.execute).not.toHaveBeenCalled();
-    });
-
-    it('returns 404 for a missing collection', async () => {
-      collectionsService.getCollectionRecord.mockResolvedValue(null);
-      await expect(controller.handleSingleCollection(7)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
-      expect(
-        collectionWorkerService.executeForCollection,
-      ).not.toHaveBeenCalled();
-    });
-
-    it('returns 409 when a handler is already running', async () => {
-      collectionsService.getCollectionRecord.mockResolvedValue(
-        createCollection({ id: 7 }),
-      );
-      collectionWorkerService.isRunning.mockReturnValue(true);
-      await expect(controller.handleSingleCollection(7)).rejects.toBeInstanceOf(
-        ConflictException,
-      );
-      expect(
-        collectionWorkerService.executeForCollection,
-      ).not.toHaveBeenCalled();
-    });
-
-    it('rechecks running status after the existence lookup before accepting another request', async () => {
-      let resolveLookup!: (
-        collection: ReturnType<typeof createCollection>,
-      ) => void;
-      collectionsService.getCollectionRecord.mockReturnValueOnce(
-        new Promise((resolve) => {
-          resolveLookup = resolve;
-        }),
-      );
-      const pending = controller.handleSingleCollection(7);
-      collectionWorkerService.isRunning.mockReturnValue(true);
-      resolveLookup(createCollection({ id: 7 }));
-      await expect(pending).rejects.toBeInstanceOf(ConflictException);
-      expect(
-        collectionWorkerService.executeForCollection,
-      ).not.toHaveBeenCalled();
-    });
-  });
+        );
+        const pending = controller[method](7);
+        collectionWorkerService.isRunning.mockReturnValue(true);
+        resolveLookup(createCollection({ id: 7 }));
+        await expect(pending).rejects.toBeInstanceOf(ConflictException);
+        expect(collectionWorkerService[workerMethod]).not.toHaveBeenCalled();
+      });
+    },
+  );
 });

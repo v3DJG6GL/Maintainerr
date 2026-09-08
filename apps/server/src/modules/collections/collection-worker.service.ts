@@ -174,6 +174,17 @@ export class CollectionWorkerService extends TaskBase {
     );
   }
 
+  public triggerForCollection(collectionId: number): Promise<void> {
+    if (!Number.isSafeInteger(collectionId) || collectionId <= 0) {
+      return Promise.reject(
+        new RangeError('A positive collection ID is required.'),
+      );
+    }
+    return this.executeWith((signal) =>
+      this.handleCollections(signal, collectionId, true),
+    );
+  }
+
   protected executeTask(abortSignal: AbortSignal): Promise<void> {
     return this.handleCollections(abortSignal);
   }
@@ -181,11 +192,12 @@ export class CollectionWorkerService extends TaskBase {
   private async handleCollections(
     abortSignal: AbortSignal,
     collectionId?: number,
+    immediate = false,
   ): Promise<void> {
     const scope =
       collectionId === undefined
         ? 'all collections'
-        : `collection ${collectionId}`;
+        : `collection ${collectionId}${immediate ? ' (countdown bypass)' : ''}`;
     this.eventEmitter.emit(
       MaintainerrEvent.CollectionHandler_Started,
       new CollectionHandlerStartedEventDto(`Started handling of ${scope}`),
@@ -232,7 +244,7 @@ export class CollectionWorkerService extends TaskBase {
       let noWindowCollectionCount = 0;
       let noDueMediaCollectionCount = 0;
 
-      // Preserve active filtering for both global and collection-scoped runs.
+      // Manual runs bypass only the countdown, retaining active filtering.
       const collections = await this.collectionRepo.find({
         where: {
           isActive: true,
@@ -254,7 +266,7 @@ export class CollectionWorkerService extends TaskBase {
         // delete date, the collection card shows "Never", and the overlay
         // processor draws no countdown. Only the due query read it as 0, which
         // made the danger date now and every member due at once.
-        if (effectiveDeletionWindow(collection) == null) {
+        if (!immediate && effectiveDeletionWindow(collection) == null) {
           noWindowCollectionCount++;
           this.logger.log(
             `Skipping collection '${collection.title}' as it has no 'take action after days' set`,
@@ -284,7 +296,7 @@ export class CollectionWorkerService extends TaskBase {
           await this.collectionMediaRepo.find({
             where: {
               collectionId: collection.id,
-              addDate: LessThanOrEqual(dangerDate),
+              ...(immediate ? {} : { addDate: LessThanOrEqual(dangerDate) }),
             },
           })
         ).filter(

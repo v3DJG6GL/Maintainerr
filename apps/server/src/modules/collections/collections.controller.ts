@@ -375,6 +375,24 @@ export class CollectionsController {
     });
   }
 
+  @Post('/:id/trigger')
+  async triggerSingleCollection(
+    @Param('id', new ZodValidationPipe(collectionHandleIdSchema)) id: number,
+  ): Promise<void> {
+    if (!(await this.collectionService.getCollectionRecord(id))) {
+      throw new NotFoundException('Collection not found');
+    }
+    // Check after the lookup so a concurrent request that started while we
+    // were reading cannot be accepted as a second handler run.
+    if (this.collectionWorkerService.isRunning()) {
+      throw new ConflictException('The collection handler is already running');
+    }
+    this.collectionWorkerService.triggerForCollection(id).catch((error) => {
+      this.logger.error('Failed to start collection handler execution');
+      this.logger.debug(error);
+    });
+  }
+
   @Put('/schedule/update')
   updateSchedule(
     @Body(new ZodValidationPipe(updateScheduleBodySchema))

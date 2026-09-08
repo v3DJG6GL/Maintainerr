@@ -618,7 +618,7 @@ describe('CollectionWorkerService', () => {
         return members.filter(
           (member) =>
             member.collectionId === where.collectionId &&
-            member.addDate <= where.addDate.value,
+            (!where.addDate || member.addDate <= where.addDate.value),
         );
       });
       collectionHandler.handleMedia.mockResolvedValue('handled');
@@ -662,53 +662,102 @@ describe('CollectionWorkerService', () => {
       );
     });
 
-    it('preserves deadlines, failed evaluation, exclusion and playing protections without forcing action', async () => {
+    it.each([false, true])(
+      'preserves protections with countdown override %s',
+      async (immediate) => {
+        const { selected, members } = arrangeScope();
+        if (immediate) selected.deleteAfterDays = null;
+        members.push(
+          createCollectionMedia(selected, {
+            mediaServerId: 'future',
+            addDate: new Date('2099-01-01'),
+          }),
+        );
+        members.push(
+          createCollectionMedia(selected, {
+            mediaServerId: 'failed-rule',
+            addDate: new Date('2000-01-01'),
+            includedByRule: true,
+            manualMembershipSource: null,
+            ruleEvaluationFailed: true,
+          }),
+        );
+        members.push(
+          createCollectionMedia(selected, {
+            mediaServerId: 'excluded',
+            addDate: new Date('2000-01-01'),
+            ruleEvaluationFailed: false,
+          }),
+        );
+        members.push(
+          createCollectionMedia(selected, {
+            mediaServerId: 'playing',
+            addDate: new Date('2000-01-01'),
+            ruleEvaluationFailed: false,
+          }),
+        );
+        exclusionRepository.find.mockResolvedValue([
+          { mediaServerId: 'excluded', ruleGroupId: null },
+        ] as Exclusion[]);
+        const server = await mediaServerFactory.verifyConnection();
+        jest
+          .spyOn(server, 'getActiveSessions')
+          .mockResolvedValue(new Set(['playing']));
+        if (immediate)
+          await collectionWorkerService.triggerForCollection(selected.id);
+        else await collectionWorkerService.executeForCollection(selected.id);
+        expect(collectionHandler.handleMedia).toHaveBeenCalledTimes(
+          immediate ? 2 : 1,
+        );
+        expect(collectionHandler.handleMedia).toHaveBeenCalledWith(
+          selected,
+          members[0],
+        );
+        if (immediate) {
+          expect(collectionHandler.handleMedia).toHaveBeenCalledWith(
+            selected,
+            members[2],
+          );
+          expect(collectionMediaRepository.find).toHaveBeenCalledWith({
+            where: { collectionId: selected.id },
+          });
+        } else {
+          expect(collectionMediaRepository.find).toHaveBeenCalledWith({
+            where: {
+              collectionId: selected.id,
+              addDate: expect.any(FindOperator),
+            },
+          });
+        }
+      },
+    );
+
+    it.each(['inactive', 'do nothing'] as const)(
+      'retains the %s safeguard for immediate runs',
+      async (condition) => {
+        const { selected } = arrangeScope();
+        if (condition === 'inactive') selected.isActive = false;
+        else selected.arrAction = ServarrAction.DO_NOTHING;
+        await collectionWorkerService.triggerForCollection(selected.id);
+        expect(collectionHandler.handleMedia).not.toHaveBeenCalled();
+      },
+    );
+
+    it('does not leak an immediate override into the next global run', async () => {
       const { selected, members } = arrangeScope();
-      members.push(
-        createCollectionMedia(selected, {
-          mediaServerId: 'future',
-          addDate: new Date('2099-01-01'),
-        }),
-      );
-      members.push(
-        createCollectionMedia(selected, {
-          mediaServerId: 'failed-rule',
-          addDate: new Date('2000-01-01'),
-          includedByRule: true,
-          manualMembershipSource: null,
-          ruleEvaluationFailed: true,
-        }),
-      );
-      members.push(
-        createCollectionMedia(selected, {
-          mediaServerId: 'excluded',
-          addDate: new Date('2000-01-01'),
-          ruleEvaluationFailed: false,
-        }),
-      );
-      members.push(
-        createCollectionMedia(selected, {
-          mediaServerId: 'playing',
-          addDate: new Date('2000-01-01'),
-          ruleEvaluationFailed: false,
-        }),
-      );
-      exclusionRepository.find.mockResolvedValue([
-        { mediaServerId: 'excluded', ruleGroupId: null },
-      ] as Exclusion[]);
-      const server = await mediaServerFactory.verifyConnection();
-      jest
-        .spyOn(server, 'getActiveSessions')
-        .mockResolvedValue(new Set(['playing']));
-      await collectionWorkerService.executeForCollection(selected.id);
-      expect(collectionHandler.handleMedia).toHaveBeenCalledTimes(1);
+      members[0].addDate = new Date('2099-01-01');
+      await collectionWorkerService.triggerForCollection(selected.id);
       expect(collectionHandler.handleMedia).toHaveBeenCalledWith(
         selected,
         members[0],
       );
-      expect(collectionMediaRepository.find).toHaveBeenCalledWith({
-        where: { collectionId: selected.id, addDate: expect.any(FindOperator) },
-      });
+      collectionHandler.handleMedia.mockClear();
+      await collectionWorkerService.execute();
+      expect(collectionHandler.handleMedia).toHaveBeenCalledTimes(1);
+      expect(collectionHandler.handleMedia).not.toHaveBeenCalledWith(
+        selected,
+        members[0],
+      );
     });
 
     it.each(['inactive', 'no deadline', 'do nothing'] as const)(
