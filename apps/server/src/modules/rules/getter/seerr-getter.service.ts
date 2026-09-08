@@ -24,6 +24,7 @@ import {
   RuleConstants,
 } from '../constants/rules.constants';
 import { ArrLookupCache } from '../helpers/arr-lookup-cache';
+import { seerrMediaKey } from '../../api/seerr-api/seerr-watchlist';
 
 @Injectable()
 export class SeerrGetterService {
@@ -49,6 +50,15 @@ export class SeerrGetterService {
     arrLookupCache?: ArrLookupCache,
   ) {
     try {
+      const prop = this.appProperties.find((el) => el.id === id);
+      if (
+        prop?.name === 'isInWatchlist' ||
+        prop?.name === 'watchlistedByUsers' ||
+        prop?.name === 'isInWatchlist_including_parent' ||
+        prop?.name === 'watchlistedByUsers_including_parent'
+      ) {
+        return await this.getWatchlistValue(prop.name, libItem, arrLookupCache);
+      }
       let origLibItem: MediaItem = undefined;
 
       // get original show in case of season / episode
@@ -60,7 +70,6 @@ export class SeerrGetterService {
         );
       }
 
-      const prop = this.appProperties.find((el) => el.id === id);
       // The id-resolution (media item -> tmdb) is identical for an item across
       // every Seerr condition in a run, yet ran once per condition - redundant
       // CPU, response cloning and duplicate logs (#3285, the same redundancy the
@@ -373,6 +382,62 @@ export class SeerrGetterService {
       }
     });
     return seasonRequests;
+  }
+
+  private async getWatchlistValue(
+    propName: string,
+    item: MediaItem,
+    arrLookupCache?: ArrLookupCache,
+  ): Promise<boolean | string[] | undefined> {
+    const includingParent = propName.endsWith('_including_parent');
+    const isChild = item.type === 'season' || item.type === 'episode';
+    // Imported operands must obey the same scope as the catalog. Seerr has
+    // title-level movie/TV membership, never native episode/season entries.
+    if (includingParent !== isChild) return undefined;
+    let title: MediaItem | undefined = item;
+    if (isChild) {
+      const mediaServer = await this.mediaServerFactory.getService();
+      let showId = item.type === 'season' ? item.parentId : item.grandparentId;
+      if (!showId && item.type === 'episode' && item.parentId) {
+        const season = await mediaServer.getMetadata(item.parentId);
+        if (season?.type === 'season') showId = season.parentId;
+      }
+      if (!showId) return undefined;
+      title = await mediaServer.getMetadata(showId);
+      if (title?.type !== 'show') return undefined;
+    }
+    if (title?.type !== 'movie' && title?.type !== 'show') return undefined;
+    const resolveIds = () =>
+      this.metadataService.resolveIdsFromMediaItemForService(title, 'seerr');
+    const ids = await (arrLookupCache
+      ? arrLookupCache.memoize(
+          `metadata:seerr:${title.id}`,
+          resolveIds,
+          (resolved) => !resolved?.tmdb,
+        )
+      : resolveIds());
+    const tmdbId = ids?.tmdb;
+    if (
+      typeof tmdbId !== 'number' ||
+      !Number.isInteger(tmdbId) ||
+      tmdbId <= 0
+    ) {
+      return undefined;
+    }
+    const membership = await this.seerrApi.getWatchlistMembership();
+    if (!membership) return undefined;
+    const owners =
+      membership.ownersByMedia.get(
+        seerrMediaKey(title.type === 'movie' ? 'movie' : 'tv', tmdbId),
+      ) ?? [];
+    if (propName.startsWith('isInWatchlist')) return owners.length > 0;
+    const usernames: string[] = [];
+    for (const owner of owners) {
+      const username = membership.usernamesById.get(owner);
+      if (!username) return undefined;
+      usernames.push(username);
+    }
+    return [...new Set(usernames)];
   }
 
   private includesSeason(seasons: SeerrSeasonRequest[], seasonNumber: number) {

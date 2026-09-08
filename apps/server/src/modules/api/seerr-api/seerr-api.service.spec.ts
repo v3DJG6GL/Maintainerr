@@ -6,6 +6,7 @@ import cacheManager from '../lib/cache';
 import {
   SEERR_REQUESTS_CACHE_ID,
   SEERR_REQUESTS_CACHE_KEY,
+  SEERR_WATCHLIST_CACHE_KEY,
 } from './seerr-api.constants';
 import { SeerrApi } from './helpers/seerr-api.helper';
 import {
@@ -690,10 +691,15 @@ describe('SeerrApiService.init lifecycle', () => {
     expect(service.api).toBeUndefined();
   });
 
-  it('clears cached request snapshots when settings change', () => {
+  it('clears cached request and watchlist snapshots when settings change', () => {
     const cache = cacheManager.getCache(SEERR_REQUESTS_CACHE_ID).data;
     cache.set(SEERR_REQUESTS_CACHE_KEY, new Map([['movie:1', []]]));
+    cache.set(SEERR_WATCHLIST_CACHE_KEY, {
+      ownersByMedia: new Map(),
+      usernamesById: new Map(),
+    });
     service.init();
     expect(cache.has(SEERR_REQUESTS_CACHE_KEY)).toBe(false);
+    expect(cache.has(SEERR_WATCHLIST_CACHE_KEY)).toBe(false);
   });
 });

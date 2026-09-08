@@ -12,3 +12,6 @@ export const SEERR_REQUESTS_CACHE_KEY = 'request-index';
 // OFFSET pagination re-scans skipped rows, so a larger page than getUsers' 50
 // means fewer round-trips and less server-side re-scan for one bulk sweep.
 export const SEERR_REQUESTS_PAGE_SIZE = 100;
+
+// Uses the existing Seerr snapshot cache (no cloning), flushed each rule-group run.
+export const SEERR_WATCHLIST_CACHE_KEY = 'watchlist-membership';

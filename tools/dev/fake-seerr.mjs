@@ -35,6 +35,8 @@
  *   FAKE_SEERR_FLAKY=1 node tools/dev/fake-seerr.mjs   # /movie and /tv rate-limit
  *   FAKE_SEERR_TMDB_IDS=603,1396,1408 node tools/dev/fake-seerr.mjs  # explicit ids
  *   FAKE_SEERR_LOG=0 node tools/dev/fake-seerr.mjs     # silence the request log
+ *   FAKE_SEERR_WATCHLIST_FAIL_PAGE=2 node tools/dev/fake-seerr.mjs
+ *     # fail a later watchlist page to verify unavailable membership is safe
  *
  * The dev seed (tools/dev/seed-db.mjs) points settings.seerr_url at
  * http://localhost:5055, so no settings change is needed - just start this
@@ -45,6 +47,7 @@ import http from 'node:http';
 const PORT = Number(process.env.FAKE_SEERR_PORT ?? 5055);
 const LOG = process.env.FAKE_SEERR_LOG !== '0';
 const FLAKY = process.env.FAKE_SEERR_FLAKY === '1';
+const WATCHLIST_FAIL_PAGE = Number(process.env.FAKE_SEERR_WATCHLIST_FAIL_PAGE ?? 0);
 
 // The tmdbIds that have a request. Pairs with the media server library under
 // test: any library item resolving to one of these ids is "requested".
@@ -91,6 +94,27 @@ const USERS = [
     displayName: 'devseed-jelly',
   },
 ];
+
+// Include a second user page and a second watchlist page. The final user owns
+// an item independently, so stopping after the first user page is observable.
+const WATCHLIST_USERS = [
+  ...USERS,
+  ...Array.from({ length: 48 }, (_, index) => ({
+    id: index + 4,
+    userType: 2,
+    username: `devseed-user-${index + 4}`,
+  })),
+];
+const WATCHLISTS = new Map([
+  [1, [
+    ...Array.from({ length: 20 }, (_, index) => ({ tmdbId: 700001 + index, mediaType: 'movie' })),
+    // Membership does not require an associated request.
+    { tmdbId: 799999, mediaType: 'movie' },
+    { tmdbId: 710001, mediaType: 'tv' },
+  ]],
+  [3, [{ tmdbId: 710002, mediaType: 'tv' }]],
+  [51, [{ tmdbId: 700090, mediaType: 'movie' }]],
+]);
 
 const ISO = (daysAgo) =>
   new Date(Date.now() - daysAgo * 86_400_000).toISOString();
@@ -259,12 +283,33 @@ const server = http.createServer((req, res) => {
     status = send(res, 200, {
       pageInfo: {
         page: Math.floor(skip / take) + 1,
-        pages: 1,
+        pages: Math.ceil(WATCHLIST_USERS.length / take),
         pageSize: take,
-        results: USERS.length,
+        results: WATCHLIST_USERS.length,
       },
-      results: USERS,
+      results: WATCHLIST_USERS.slice(skip, skip + take),
     });
+
+  } else if (method === 'GET' && path.startsWith('/user/') && path.endsWith('/watchlist')) {
+    const userId = Number(path.split('/')[2]);
+    const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
+    const items = WATCHLISTS.get(userId) ?? [];
+    if (!WATCHLIST_USERS.some((user) => user.id === userId)) {
+      status = send(res, 404, { message: 'Unknown user' });
+    } else if (page === WATCHLIST_FAIL_PAGE) {
+      status = send(res, 503, { message: 'Watchlist page unavailable (fake-seerr)' });
+    } else {
+      status = send(res, 200, {
+        page,
+        totalPages: Math.max(1, Math.ceil(items.length / 20)),
+        totalResults: items.length,
+        results: items.slice((page - 1) * 20, page * 20).map((item) => ({
+          ...item,
+          id: item.tmdbId + userId * 1000000,
+          title: item.mediaType === 'movie' ? 'Sample Movie' : 'Sample Series',
+        })),
+      });
+    }
 
     // --- Writes other flows may probe (request/media deletion) ---------------
   } else if (method === 'DELETE') {

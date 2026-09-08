@@ -17,9 +17,15 @@ import {
   SEERR_REQUESTS_CACHE_ID,
   SEERR_REQUESTS_CACHE_KEY,
   SEERR_REQUESTS_PAGE_SIZE,
+  SEERR_WATCHLIST_CACHE_KEY,
 } from './seerr-api.constants';
 import { SeerrApi } from './helpers/seerr-api.helper';
-import { seerrMediaKey, SeerrMediaType } from './seerr-watchlist';
+import {
+  fetchSeerrWatchlistMembership,
+  seerrMediaKey,
+  SeerrMediaType,
+  SeerrWatchlistMembership,
+} from './seerr-watchlist';
 
 interface SeerrMediaInfo {
   id: number;
@@ -218,10 +224,51 @@ export class SeerrApiService {
     this.logger.setContext(SeerrApiService.name);
   }
 
+  private watchlistPromise?: Promise<SeerrWatchlistMembership | undefined>;
+
+  public async getWatchlistMembership(): Promise<
+    SeerrWatchlistMembership | undefined
+  > {
+    if (!this.api || !this.isConfigured()) return undefined;
+    const cache = cacheManager.getCache(SEERR_REQUESTS_CACHE_ID).data;
+    const cached = cache.get<SeerrWatchlistMembership>(
+      SEERR_WATCHLIST_CACHE_KEY,
+    );
+    if (cached) return cached;
+    if (this.watchlistPromise === undefined) {
+      const pending = this.buildWatchlistMembership().finally(() => {
+        if (this.watchlistPromise === pending)
+          this.watchlistPromise = undefined;
+      });
+      this.watchlistPromise = pending;
+    }
+    return this.watchlistPromise;
+  }
+
+  private async buildWatchlistMembership(): Promise<
+    SeerrWatchlistMembership | undefined
+  > {
+    const api = this.api;
+    try {
+      const membership = await fetchSeerrWatchlistMembership(api);
+      // A settings change must not publish data from the previous instance.
+      if (api !== this.api) return undefined;
+      cacheManager
+        .getCache(SEERR_REQUESTS_CACHE_ID)
+        .data.set(SEERR_WATCHLIST_CACHE_KEY, membership);
+      return membership;
+    } catch (error) {
+      this.logger.warn('Could not fetch a complete Seerr watchlist snapshot');
+      this.logger.debug(error);
+      return undefined;
+    }
+  }
+
   public init() {
     // Drop the previous client first, so removing Seerr from settings stops
     // the app querying it rather than leaving the old one live until restart.
     this.api = undefined;
+    this.watchlistPromise = undefined;
     this.requestIndexPromise = undefined;
     cacheManager.getCache(SEERR_REQUESTS_CACHE_ID).data.flushAll();
     cacheManager.getCache('seerr').data.flushAll();

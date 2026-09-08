@@ -30,6 +30,7 @@ describe('SeerrGetterService', () => {
       getShow: jest.fn(),
       getSeason: jest.fn(),
       getRequestsForMedia: jest.fn(),
+      getWatchlistMembership: jest.fn(),
     } as unknown as jest.Mocked<SeerrApiService>;
 
     const mediaServerFactory = {
@@ -127,6 +128,82 @@ describe('SeerrGetterService', () => {
   // The id-resolution (media item -> tmdb) preceding every Seerr query ran once
   // per rule condition; the run-scoped ArrLookupCache now memoizes it so it runs
   // once per item (#3285). Mirrors the Radarr/Sonarr candidate memo.
+  describe('watchlist membership', () => {
+    const membership = () => ({
+      ownersByMedia: new Map([
+        ['movie:12345', [1]],
+        ['tv:12345', [2]],
+      ]),
+      usernamesById: new Map([
+        [1, 'local-user'],
+        [2, 'jellyfin-user'],
+      ]),
+    });
+
+    it('uses watchlists independently of requests and distinguishes movie/TV IDs', async () => {
+      const { service, seerrApi } = createService();
+      seerrApi.getWatchlistMembership.mockResolvedValue(membership());
+      await expect(service.get(7, movieLibItem)).resolves.toBe(true);
+      await expect(service.get(8, movieLibItem)).resolves.toEqual([
+        'local-user',
+      ]);
+      await expect(service.get(8, showLibItem)).resolves.toEqual([
+        'jellyfin-user',
+      ]);
+      expect(seerrApi.getRequestsForMedia).not.toHaveBeenCalled();
+    });
+
+    it('returns false/empty only for a complete snapshot without membership', async () => {
+      const { service, seerrApi } = createService();
+      seerrApi.getWatchlistMembership.mockResolvedValue({
+        ownersByMedia: new Map(),
+        usernamesById: new Map(),
+      });
+      await expect(service.get(7, movieLibItem)).resolves.toBe(false);
+      await expect(service.get(8, movieLibItem)).resolves.toEqual([]);
+      seerrApi.getWatchlistMembership.mockResolvedValue(undefined);
+      await expect(service.get(7, movieLibItem)).resolves.toBeUndefined();
+      await expect(service.get(8, movieLibItem)).resolves.toBeUndefined();
+    });
+
+    it('preserves boolean membership but skips username rules for unresolved owners', async () => {
+      const { service, seerrApi } = createService();
+      const snapshot = membership();
+      snapshot.ownersByMedia.set('movie:12345', [1, 3]);
+      seerrApi.getWatchlistMembership.mockResolvedValue(snapshot);
+      await expect(service.get(7, movieLibItem)).resolves.toBe(true);
+      await expect(service.get(8, movieLibItem)).resolves.toBeUndefined();
+    });
+
+    it('lifts seasons and episodes only for explicit parent-inclusive properties', async () => {
+      const { service, seerrApi, mediaServerFactory } = createService();
+      seerrApi.getWatchlistMembership.mockResolvedValue(membership());
+      const mediaServer = await mediaServerFactory.getService();
+      jest.mocked(mediaServer.getMetadata).mockResolvedValue(showLibItem);
+      const episode = createMediaItem({
+        type: 'episode',
+        grandparentId: showLibItem.id,
+      });
+      await expect(service.get(9, seasonLibItem)).resolves.toBe(true);
+      await expect(service.get(10, episode)).resolves.toEqual([
+        'jellyfin-user',
+      ]);
+      await expect(service.get(7, seasonLibItem)).resolves.toBeUndefined();
+      await expect(service.get(8, episode)).resolves.toBeUndefined();
+      await expect(service.get(9, showLibItem)).resolves.toBeUndefined();
+    });
+
+    it('does not substitute an item or empty list when the parent or TMDB lookup fails', async () => {
+      const { service, seerrApi, metadataService } = createService();
+      await expect(service.get(9, seasonLibItem)).resolves.toBeUndefined();
+      metadataService.resolveIdsFromMediaItemForService.mockResolvedValue(
+        undefined,
+      );
+      await expect(service.get(7, movieLibItem)).resolves.toBeUndefined();
+      expect(seerrApi.getWatchlistMembership).not.toHaveBeenCalled();
+    });
+  });
+
   it('passes explicit media type to the request index for movies and whole shows', async () => {
     const { service, seerrApi } = createService();
     seerrApi.getRequestsForMedia.mockResolvedValue([]);
