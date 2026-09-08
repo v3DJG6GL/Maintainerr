@@ -172,7 +172,7 @@ msgid "{elementCount, plural, one {# element} other {# elements}}"
 msgstr "{elementCount, plural, one {# element} other {# element}}"
 
 #: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
-msgid "{fileCount, plural, one {Files and folders (# file)} other {Files and folders (# files)}}"
+msgid "{fileCount, plural, one {# file} other {# files}}"
 msgstr ""
 
 #: src/components/OverlayEditor/PropertiesPanel.tsx
@@ -951,9 +951,17 @@ msgstr "Kopierat till urklipp"
 msgid "Copy"
 msgstr ""
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Copy full path"
+msgstr ""
+
 #: src/components/Collection/CollectionDetail/TestMediaItem/index.tsx
 msgid "Copy to clipboard"
 msgstr "Kopiera till urklipp"
+
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Copy unavailable in this browser."
+msgstr ""
 
 #: src/components/Common/YamlImporterModal/index.tsx
 msgid "Copy YAML"
@@ -2851,6 +2859,10 @@ msgstr "Operator"
 msgid "Options"
 msgstr "Alternativ"
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Other episodes"
+msgstr ""
+
 #: src/components/VersionStatus/index.tsx
 msgid "Out of Date"
 msgstr "Inaktuell"
@@ -3431,6 +3443,10 @@ msgstr "Säsong"
 msgid "season {itemNumber}"
 msgstr "säsong {itemNumber}"
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Season {seasonNumber}"
+msgstr ""
+
 #: src/components/Collection/CollectionItem/index.tsx
 #: src/components/Common/MediaActionModal.tsx
 #: src/components/Rules/RuleGroup/AddModal/index.tsx
@@ -3757,6 +3773,10 @@ msgstr "Sortera översiktens objekt"
 #: src/components/Rules/RuleGroup/AddModal/index.tsx
 msgid "Sort title"
 msgstr "Sorteringstitel"
+
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Specials"
+msgstr ""
 
 #: src/components/Rules/Rule/RuleCreator/RuleInput/index.tsx
 msgid "Specific date"

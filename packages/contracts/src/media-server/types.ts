@@ -22,6 +22,10 @@ export interface MediaFile {
 }
 
 export interface MediaStorageFile extends MediaFile {
+  seasonId?: string
+  seasonNumber?: number
+  seasonTitle?: string
+  episodeNumber?: number
   itemId: string
   title: string
   sourceId: string
@@ -32,6 +36,7 @@ export interface MediaStorageFile extends MediaFile {
 }
 
 export interface MediaStorageDetails {
+  itemType?: MediaItemType
   status: 'complete' | 'partial' | 'unavailable'
   sizeBytes: number | null
   files: MediaStorageFile[]

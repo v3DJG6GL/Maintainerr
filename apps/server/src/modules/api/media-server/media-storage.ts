@@ -18,21 +18,18 @@ export async function getMediaStorageDetails(
   const files = new Map<string, MediaStorageFile>();
   const folders = new Set<string>();
   const visited = new Set<string>();
+  let itemType: MediaStorageDetails['itemType'];
   let complete = true;
   let available = false;
   const limit = 10_000;
 
-  const visit = async (item: MediaItem): Promise<void> => {
+  const visit = async (item: MediaItem, season?: MediaItem): Promise<void> => {
     if (visited.has(item.id)) return;
     if (visited.size >= limit) {
       complete = false;
       return;
     }
     visited.add(item.id);
-    for (const folder of item.folderPaths ?? []) {
-      const path = toLocalMediaPath(folder);
-      if (path) folders.add(path);
-    }
     if (item.type === 'show' || item.type === 'season') {
       try {
         const children = await server.getChildrenMetadata(
@@ -41,7 +38,9 @@ export async function getMediaStorageDetails(
           true,
         );
         available = true;
-        for (const child of children) await visit(child);
+        for (const child of children) {
+          await visit(child, item.type === 'season' ? item : undefined);
+        }
       } catch {
         complete = false;
       }
@@ -75,6 +74,14 @@ export async function getMediaStorageDetails(
           itemId: item.id,
           title: item.title,
           sourceId: source.id,
+          ...(item.type === 'episode'
+            ? {
+                seasonId: season?.id ?? item.parentId,
+                seasonNumber: season?.index ?? item.parentIndex,
+                seasonTitle: season?.title || item.parentTitle,
+                episodeNumber: item.index,
+              }
+            : {}),
           videoResolution: source.videoResolution,
           videoCodec: source.videoCodec,
           audioCodec: source.audioCodec,
@@ -86,14 +93,23 @@ export async function getMediaStorageDetails(
 
   try {
     const item = await server.getMetadata(itemId);
-    if (item) await visit(item);
-    else complete = false;
+    if (item) {
+      itemType = item.type;
+      // Only the selected item's locations belong in the summary. Season
+      // folders remain implicit in the episode paths when browsing a show.
+      for (const folder of item.folderPaths ?? []) {
+        const path = toLocalMediaPath(folder);
+        if (path) folders.add(path);
+      }
+      await visit(item);
+    } else complete = false;
   } catch {
     complete = false;
   }
   const values = [...files.values()];
   const knownFiles = values.filter((file) => file.sizeBytes !== undefined);
   return {
+    itemType,
     status: complete ? 'complete' : available ? 'partial' : 'unavailable',
     sizeBytes:
       knownFiles.length || complete

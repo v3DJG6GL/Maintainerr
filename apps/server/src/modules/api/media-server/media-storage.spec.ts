@@ -125,4 +125,121 @@ describe('getMediaStorageDetails', () => {
     expect(result.files[0].path).toBeUndefined();
     expect(result.sizeBytes).toBeNull();
   });
+
+  it('reports show roots and groups files by traversed season, including specials', async () => {
+    getMetadata.mockResolvedValue(
+      item('show', { type: 'show', folderPaths: ['/series'] }),
+    );
+    getChildrenMetadata.mockImplementation(async (id: string) => {
+      if (id === 'show') {
+        return [
+          item('specials', {
+            type: 'season',
+            index: 0,
+            title: 'Specials',
+            folderPaths: ['/series/Specials'],
+          }),
+          item('season-10', { type: 'season', index: 10 }),
+        ];
+      }
+      return [
+        item(`episode-${id}`, {
+          type: 'episode',
+          index: id === 'specials' ? 0 : 12,
+          parentId: 'unreliable-parent',
+          parentIndex: 99,
+          mediaSources: [{ id: 'source', duration: 0, sizeBytes: 100 }],
+        }),
+      ];
+    });
+    const result = await getMediaStorageDetails(server, 'show');
+    expect(result.itemType).toBe('show');
+    expect(result.folders).toEqual(['/series']);
+    expect(result.files[0]).toMatchObject({
+      seasonId: 'specials',
+      seasonNumber: 0,
+      seasonTitle: 'Specials',
+      episodeNumber: 0,
+    });
+    expect(result.files[1]).toMatchObject({
+      seasonId: 'season-10',
+      seasonNumber: 10,
+      episodeNumber: 12,
+    });
+    expect(getMetadata).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps selected season folders and falls back to episode numbering metadata', async () => {
+    getMetadata.mockResolvedValue(
+      item('season', {
+        type: 'season',
+        title: '',
+        folderPaths: ['/series/Season 2'],
+      }),
+    );
+    getChildrenMetadata.mockResolvedValue([
+      item('episode', {
+        type: 'episode',
+        index: 3,
+        parentIndex: 2,
+        parentTitle: 'Season 2',
+        folderPaths: ['/ignored'],
+        mediaSources: [{ id: 'source', duration: 0, sizeBytes: 100 }],
+      }),
+    ]);
+    const result = await getMediaStorageDetails(server, 'season');
+    expect(result.itemType).toBe('season');
+    expect(result.folders).toEqual(['/series/Season 2']);
+    expect(result.files[0]).toMatchObject({
+      seasonId: 'season',
+      seasonNumber: 2,
+      seasonTitle: 'Season 2',
+      episodeNumber: 3,
+    });
+    expect(getMetadata).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses selected episode metadata without fetching arbitrary parents', async () => {
+    getMetadata.mockResolvedValue(
+      item('episode', {
+        type: 'episode',
+        index: 4,
+        parentId: 'specials',
+        parentIndex: 0,
+        parentTitle: 'Specials',
+        mediaSources: [{ id: 'source', duration: 0, sizeBytes: 100 }],
+      }),
+    );
+    const result = await getMediaStorageDetails(server, 'episode');
+    expect(result.itemType).toBe('episode');
+    expect(result.files[0]).toMatchObject({
+      seasonId: 'specials',
+      seasonNumber: 0,
+      seasonTitle: 'Specials',
+      episodeNumber: 4,
+    });
+    expect(getMetadata).toHaveBeenCalledTimes(1);
+    expect(getChildrenMetadata).not.toHaveBeenCalled();
+  });
+
+  it.each(['movie', 'episode'] as const)(
+    'leaves unknown hierarchy unset for %s rather than inventing a season',
+    async (type) => {
+      getMetadata.mockResolvedValue(
+        item('media', {
+          type,
+          ...(type === 'movie' ? { parentId: 'library-folder' } : {}),
+          mediaSources: [{ id: 'source', duration: 0, sizeBytes: 100 }],
+        }),
+      );
+      const result = await getMediaStorageDetails(server, 'media');
+      expect(result.itemType).toBe(type);
+      expect(result.files[0].seasonId).toBeUndefined();
+      expect(result.files[0].seasonNumber).toBeUndefined();
+      expect(result.files[0].seasonTitle).toBeUndefined();
+      expect(result.files[0].episodeNumber).toBeUndefined();
+      expect(getMetadata).toHaveBeenCalledTimes(1);
+      expect(getChildrenMetadata).not.toHaveBeenCalled();
+    },
+  );
 });

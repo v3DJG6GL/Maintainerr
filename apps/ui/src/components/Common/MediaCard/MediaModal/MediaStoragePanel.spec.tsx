@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   render as renderComponent,
   screen,
@@ -33,10 +33,14 @@ describe('MediaStoragePanel', () => {
   beforeEach(() => {
     getApiHandler.mockReset()
   })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
 
   it('keeps files collapsed and distinguishes an incomplete total and missing size', async () => {
     getApiHandler.mockResolvedValue({
       status: 'partial',
+      itemType: 'show',
       sizeBytes: 1024,
       folders: ['/media/series'],
       files: [
@@ -53,11 +57,138 @@ describe('MediaStoragePanel', () => {
     const { container } = render(
       <MediaStoragePanel itemId="a" serverId="server" />,
     )
-    await screen.findByText('At least 1.00 KB')
+    await screen.findAllByText('At least 1.00 KB')
     expect(container.querySelector('details')?.open).toBe(false)
+    expect(screen.queryByText('file.mkv')).toBeNull()
+    fireEvent.click(screen.getByText('Other episodes'))
+    await screen.findByText('file.mkv')
     expect(screen.getByText('Size unavailable')).toBeTruthy()
     expect(screen.getByText('Path unavailable')).toBeTruthy()
-    expect(screen.getByText('/media/series/file.mkv')).toBeTruthy()
+    expect(screen.queryByText('/media/series/file.mkv')).toBeNull()
+  })
+
+  it('shows movie files immediately without a disclosure', async () => {
+    getApiHandler.mockResolvedValue({
+      itemType: 'movie',
+      status: 'complete',
+      sizeBytes: 1024,
+      folders: [],
+      files: [
+        {
+          itemId: 'movie',
+          title: 'Sample Movie',
+          sourceId: 'main',
+          path: '/movies/sample.mkv',
+          sizeBytes: 1024,
+        },
+      ],
+    })
+    const { container } = render(
+      <MediaStoragePanel itemId="movie" serverId="server" />,
+    )
+    await screen.findByText('/movies/sample.mkv')
+    expect(container.querySelector('details')).toBeNull()
+  })
+
+  it('groups seasons numerically and keeps versions under one episode heading', async () => {
+    const file = (
+      seasonNumber: number,
+      episodeNumber: number,
+      path: string,
+    ) => ({
+      itemId: `${seasonNumber}-${episodeNumber}`,
+      title: `Episode ${episodeNumber}`,
+      seasonId: `s${seasonNumber}`,
+      seasonNumber,
+      episodeNumber,
+      sourceId: path,
+      path,
+      sizeBytes: 1024,
+    })
+    getApiHandler.mockResolvedValue({
+      itemType: 'show',
+      status: 'complete',
+      sizeBytes: 5120,
+      folders: ['/series/sample'],
+      files: [
+        file(10, 1, '/series/sample/s10/a.mkv'),
+        {
+          ...file(2, 12, '/series/sample/s2/z.mkv'),
+          seasonNumber: undefined,
+        },
+        file(2, 2, '/series/sample/s2/b.mkv'),
+        file(0, 1, '/series/sample/s0/special.mkv'),
+        file(2, 2, '/series/sample/s2/b-alt.mkv'),
+      ],
+    })
+    const { container } = render(
+      <MediaStoragePanel itemId="series" serverId="server" />,
+    )
+    await screen.findByText('/series/sample')
+    const summaries = [...container.querySelectorAll('summary')]
+    expect(
+      summaries.map((summary) => summary.querySelector('span')?.textContent),
+    ).toEqual(['Specials', 'Season 2', 'Season 10'])
+    fireEvent.click(screen.getByText('Season 2'))
+    await screen.findByText('b.mkv')
+    expect(screen.getAllByText('Episode 2')).toHaveLength(1)
+    expect(screen.getByText('b-alt.mkv')).toBeTruthy()
+    expect(container.textContent!.indexOf('Episode 2')).toBeLessThan(
+      container.textContent!.indexOf('Episode 12'),
+    )
+    expect(screen.queryByText('/series/sample/s2/b.mkv')).toBeNull()
+    expect(screen.queryByText('special.mkv')).toBeNull()
+  })
+
+  it('displays Windows episode filenames and copies the full path', async () => {
+    const path = 'D:\\Series\\Sample\\Season 01\\Episode ü.mkv'
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { clipboard: { writeText } })
+    getApiHandler.mockResolvedValue({
+      itemType: 'episode',
+      status: 'complete',
+      sizeBytes: 0,
+      folders: [],
+      files: [
+        {
+          itemId: 'episode',
+          title: 'Sample Episode',
+          sourceId: 'main',
+          path,
+          sizeBytes: 0,
+          episodeNumber: 1,
+        },
+      ],
+    })
+    render(<MediaStoragePanel itemId="episode" serverId="server" />)
+    await screen.findByText('Episode ü.mkv')
+    expect(screen.queryByText(path)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Copy full path' }))
+    expect(writeText).toHaveBeenCalledWith(path)
+    await screen.findByText('Copied')
+  })
+
+  it('labels season totals as incomplete when an episode could not be read', async () => {
+    getApiHandler.mockResolvedValue({
+      itemType: 'show',
+      status: 'partial',
+      sizeBytes: 1024,
+      folders: [],
+      files: [
+        {
+          itemId: 'episode',
+          title: 'Reported Episode',
+          sourceId: 'main',
+          seasonId: 'season',
+          seasonNumber: 1,
+          path: '/series/reported.mkv',
+          sizeBytes: 1024,
+        },
+      ],
+    })
+    render(<MediaStoragePanel itemId="series" serverId="server" />)
+    const label = await screen.findByText('Season 1')
+    expect(label.closest('summary')?.textContent).toContain('At least 1.00 KB')
   })
 
   it('does not show the previous item while the next request is pending', async () => {

@@ -172,8 +172,8 @@ msgid "{elementCount, plural, one {# element} other {# elements}}"
 msgstr "{elementCount, plural, one {# element} other {# elements}}"
 
 #: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
-msgid "{fileCount, plural, one {Files and folders (# file)} other {Files and folders (# files)}}"
-msgstr "{fileCount, plural, one {Files and folders (# file)} other {Files and folders (# files)}}"
+msgid "{fileCount, plural, one {# file} other {# files}}"
+msgstr "{fileCount, plural, one {# file} other {# files}}"
 
 #: src/components/OverlayEditor/PropertiesPanel.tsx
 msgid "{formatList} - up to {imageUploadMaxLabel}."
@@ -951,9 +951,17 @@ msgstr "Copied to clipboard"
 msgid "Copy"
 msgstr "Copy"
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Copy full path"
+msgstr "Copy full path"
+
 #: src/components/Collection/CollectionDetail/TestMediaItem/index.tsx
 msgid "Copy to clipboard"
 msgstr "Copy to clipboard"
+
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Copy unavailable in this browser."
+msgstr "Copy unavailable in this browser."
 
 #: src/components/Common/YamlImporterModal/index.tsx
 msgid "Copy YAML"
@@ -2851,6 +2859,10 @@ msgstr "Operator"
 msgid "Options"
 msgstr "Options"
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Other episodes"
+msgstr "Other episodes"
+
 #: src/components/VersionStatus/index.tsx
 msgid "Out of Date"
 msgstr "Out of Date"
@@ -3431,6 +3443,10 @@ msgstr "Season"
 msgid "season {itemNumber}"
 msgstr "season {itemNumber}"
 
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Season {seasonNumber}"
+msgstr "Season {seasonNumber}"
+
 #: src/components/Collection/CollectionItem/index.tsx
 #: src/components/Common/MediaActionModal.tsx
 #: src/components/Rules/RuleGroup/AddModal/index.tsx
@@ -3757,6 +3773,10 @@ msgstr "Sort overview items"
 #: src/components/Rules/RuleGroup/AddModal/index.tsx
 msgid "Sort title"
 msgstr "Sort title"
+
+#: src/components/Common/MediaCard/MediaModal/MediaStoragePanel.tsx
+msgid "Specials"
+msgstr "Specials"
 
 #: src/components/Rules/Rule/RuleCreator/RuleInput/index.tsx
 msgid "Specific date"
