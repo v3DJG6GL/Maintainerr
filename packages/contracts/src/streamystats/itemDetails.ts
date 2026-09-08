@@ -3,8 +3,13 @@ import z from 'zod'
 // Streamystats's getItemDetails surfaces aggregation results (COUNT/SUM/AVG)
 // straight from Drizzle, which serialises them as strings even though the
 // upstream TypeScript interface declares them as `number`. Coerce defensively
-// so the schema stays robust to that wire-format quirk.
-const numberLike = z.coerce.number()
+// so the schema stays robust to that wire-format quirk. Upstream normalizes
+// empty SUM/AVG aggregates to zero before returning these fields; raw null
+// numbers are therefore invalid, unlike the explicitly nullable dates.
+const numberLike = z
+  .union([z.number(), z.string().trim().min(1)])
+  .transform(Number)
+  .pipe(z.number().nonnegative())
 
 const streamystatsUserSchema = z
   .object({

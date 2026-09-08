@@ -269,10 +269,9 @@ export class TracearrGetterService {
     }
 
     if (propName === 'watchTimeByUser') {
-      const milliseconds = history
-        .filter((item) => tracearrUserIds.has(item.user.id))
-        .reduce((total, item) => total + (item.duration_ms ?? 0), 0);
-      return Math.round(milliseconds / 60000);
+      return this.getWatchTime(
+        history.filter((item) => tracearrUserIds.has(item.user.id)),
+      );
     }
 
     const userHistory = watchedHistory.filter((item) =>
@@ -282,6 +281,24 @@ export class TracearrGetterService {
     return propName === 'viewCountByUser'
       ? userHistory.length
       : this.getLatestViewedAt(userHistory);
+  }
+
+  private getWatchTime(history: TracearrHistoryItem[]): number | undefined {
+    let milliseconds = 0;
+    for (const item of history) {
+      // Missing duration is not evidence that the play lasted zero minutes.
+      if (
+        item.duration_ms == null ||
+        !Number.isFinite(item.duration_ms) ||
+        item.duration_ms < 0
+      ) {
+        return undefined;
+      }
+      milliseconds += item.duration_ms;
+    }
+    return Number.isFinite(milliseconds)
+      ? Math.round(milliseconds / 60000)
+      : undefined;
   }
 
   private getUsernames(history: TracearrHistoryItem[]): string[] | undefined {
