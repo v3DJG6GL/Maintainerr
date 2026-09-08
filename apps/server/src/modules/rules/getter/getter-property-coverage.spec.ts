@@ -15,6 +15,7 @@ import { SonarrGetterService } from './sonarr-getter.service';
 import { SportarrGetterService } from './sportarr-getter.service';
 import { StreamystatsGetterService } from './streamystats-getter.service';
 import { TautulliGetterService } from './tautulli-getter.service';
+import { TracearrGetterService } from './tracearr-getter.service';
 
 // Per-property getter coverage harness.
 //
@@ -129,6 +130,13 @@ const apps: Array<{
     },
   },
   {
+    app: Application.TRACEARR,
+    build: async () => {
+      const g = await buildGetter(TracearrGetterService);
+      return { get: (id) => g.get(id, libItem, ruleGroup) };
+    },
+  },
+  {
     app: Application.STREAMYSTATS,
     build: async () => {
       const g = await buildGetter(StreamystatsGetterService);
@@ -181,8 +189,11 @@ describe('Getter property coverage matrix (all rule properties)', () => {
   });
 
   it('covers every property defined in the rule constants', () => {
-    const expected = apps.reduce(
-      (sum, { app }) => sum + propsFor(app).length,
+    expect(apps.map(({ app }) => app).sort()).toEqual(
+      new RuleConstants().applications.map(({ id }) => id).sort(),
+    );
+    const expected = new RuleConstants().applications.reduce(
+      (sum, { props }) => sum + props.length,
       0,
     );
     expect(Object.keys(matrix)).toHaveLength(expected);
