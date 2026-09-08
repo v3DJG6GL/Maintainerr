@@ -1,4 +1,5 @@
 import { Trans, useLingui } from '@lingui/react/macro'
+import { useState } from 'react'
 import { useStreamystatsItemDetails } from '../../../../../api/streamystats'
 import BrandLink from '../../../BrandLink'
 import { SmallLoadingSpinner } from '../../../LoadingSpinner'
@@ -35,7 +36,9 @@ const StreamystatsStatsContent = ({
 }: StreamystatsStatsPanelProps) => {
   const { i18n } = useLingui()
   const query = useStreamystatsItemDetails(itemId, itemUrl)
+  const [expanded, setExpanded] = useState(false)
   const data = query.data
+  const userCount = data?.usersWatched.length ?? 0
 
   // Named locals so the counts reach the catalog as readable placeholders.
   const episodeStats = data?.episodeStats
@@ -146,7 +149,10 @@ const StreamystatsStatsContent = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {data.usersWatched.slice(0, 5).map((row) => (
+                  {(expanded
+                    ? data.usersWatched
+                    : data.usersWatched.slice(0, 5)
+                  ).map((row) => (
                     <tr
                       key={row.user.id}
                       className="border-t border-zinc-700/50"
@@ -165,6 +171,20 @@ const StreamystatsStatsContent = ({
                   ))}
                 </tbody>
               </table>
+              {userCount > 5 ? (
+                <button
+                  type="button"
+                  className="w-full border-t border-zinc-700/50 px-2 py-2 text-left underline"
+                  aria-expanded={expanded}
+                  onClick={() => setExpanded(!expanded)}
+                >
+                  {expanded ? (
+                    <Trans>Show fewer users</Trans>
+                  ) : (
+                    <Trans>Show all {userCount} users</Trans>
+                  )}
+                </button>
+              ) : null}
             </div>
           ) : null}
         </div>

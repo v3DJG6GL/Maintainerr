@@ -81,6 +81,33 @@ describe('StreamystatsStatsPanel', () => {
     },
   )
 
+  it('resets expanded users when switching items', async () => {
+    getApiHandler
+      .mockResolvedValueOnce(detailsFor('First'))
+      .mockResolvedValueOnce(detailsFor('Next'))
+    const client = createTestQueryClient()
+    const panel = (itemId: string) => (
+      <QueryClientProvider client={client}>
+        <StreamystatsStatsPanel
+          itemId={itemId}
+          itemUrl={`http://stats/${itemId}`}
+        />
+      </QueryClientProvider>
+    )
+    const view = renderWithI18n(panel('first'))
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Show all 6 users' }),
+    )
+    expect(screen.getByText('First user 5')).toBeTruthy()
+    view.rerender(panel('next'))
+    const toggle = await screen.findByRole('button', {
+      name: 'Show all 6 users',
+    })
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByText('Next user 5')).toBeNull()
+    expect(screen.getByText('Next user 0')).toBeTruthy()
+  })
+
   it('renders aggregate stats and per-user table on a valid response', async () => {
     getApiHandler.mockResolvedValue({
       item: { id: 'abc' },
@@ -163,6 +190,36 @@ describe('StreamystatsStatsPanel', () => {
     const panel = container.firstChild as HTMLElement
     expect(panel?.className).toMatch(/min-h-/)
   })
+  it('exposes all users through an explicit disclosure without changing the aggregate', async () => {
+    getApiHandler.mockResolvedValue({
+      item: { id: 'abc' },
+      totalViews: 6,
+      totalWatchTime: 36000,
+      completionRate: 80,
+      firstWatched: null,
+      lastWatched: null,
+      usersWatched: Array.from({ length: 6 }, (_, index) => ({
+        user: { id: `user-${index}`, name: `User ${index}` },
+        watchCount: 1,
+        totalWatchTime: 60,
+        completionRate: 80,
+        firstWatched: null,
+        lastWatched: null,
+      })),
+      watchHistory: [],
+      watchCountByMonth: [],
+    })
+    render(<StreamystatsStatsPanel itemId="abc" itemUrl="http://stats/item" />)
+    const toggle = await screen.findByRole('button', {
+      name: 'Show all 6 users',
+    })
+    expect(screen.queryByText('User 5')).toBeNull()
+    fireEvent.click(toggle)
+    expect(screen.getByText('User 5')).toBeTruthy()
+    expect(screen.getByText('10h')).toBeTruthy()
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+  })
+
   it('retries unavailable data instead of calling it empty history', async () => {
     getApiHandler
       .mockRejectedValueOnce({ isAxiosError: true, response: { status: 503 } })

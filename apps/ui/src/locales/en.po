@@ -3633,6 +3633,14 @@ msgctxt "Toggle layer visibility"
 msgid "Show"
 msgstr "Show"
 
+#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+msgid "Show all {userCount} users"
+msgstr "Show all {userCount} users"
+
+#: src/components/Common/MediaCard/MediaModal/StreamystatsStatsPanel/index.tsx
+msgid "Show fewer users"
+msgstr "Show fewer users"
+
 #: src/components/Settings/MediaServerSelector/index.tsx
 msgid "Show incompatible rules ({skippedRules})"
 msgstr "Show incompatible rules ({skippedRules})"
