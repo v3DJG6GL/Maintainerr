@@ -212,7 +212,7 @@ const CollectionItem = (props: ICollectionItem) => {
 
           <div className="min-w-0">
             <p className="text-xs font-semibold tracking-wide text-zinc-400 uppercase">
-              <Trans>Size</Trans>
+              <Trans>Estimated size</Trans>
             </p>
             <p className="text-maintainerr">
               {formatSizeCompact(props.collection.totalSizeBytes)}

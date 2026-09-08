@@ -1491,6 +1491,10 @@ msgstr "Error al cargar los datos de la regla"
 msgid "Error: {reason}"
 msgstr "Error: {reason}"
 
+#: src/components/Collection/CollectionItem/index.tsx
+msgid "Estimated size"
+msgstr ""
+
 #: src/components/Collection/CollectionDetail/CollectionInfo/CollectionLogsTable.tsx
 msgid "Event"
 msgstr "Evento"
@@ -3674,7 +3678,6 @@ msgstr "Iniciar sesión con Emby"
 msgid "Signing in…"
 msgstr "Iniciando sesión…"
 
-#: src/components/Collection/CollectionItem/index.tsx
 #: src/components/OverlayEditor/PropertiesPanel.tsx
 #: src/components/Settings/Logs/index.tsx
 #: src/components/StorageMetrics/index.tsx

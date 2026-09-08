@@ -1491,6 +1491,10 @@ msgstr ""
 msgid "Error: {reason}"
 msgstr ""
 
+#: src/components/Collection/CollectionItem/index.tsx
+msgid "Estimated size"
+msgstr ""
+
 #: src/components/Collection/CollectionDetail/CollectionInfo/CollectionLogsTable.tsx
 msgid "Event"
 msgstr ""
@@ -3674,7 +3678,6 @@ msgstr ""
 msgid "Signing in…"
 msgstr ""
 
-#: src/components/Collection/CollectionItem/index.tsx
 #: src/components/OverlayEditor/PropertiesPanel.tsx
 #: src/components/Settings/Logs/index.tsx
 #: src/components/StorageMetrics/index.tsx

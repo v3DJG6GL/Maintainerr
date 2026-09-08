@@ -1491,6 +1491,10 @@ msgstr "Error loading rule data"
 msgid "Error: {reason}"
 msgstr "Error: {reason}"
 
+#: src/components/Collection/CollectionItem/index.tsx
+msgid "Estimated size"
+msgstr "Estimated size"
+
 #: src/components/Collection/CollectionDetail/CollectionInfo/CollectionLogsTable.tsx
 msgid "Event"
 msgstr "Event"
@@ -3674,7 +3678,6 @@ msgstr "Sign in with Emby"
 msgid "Signing in…"
 msgstr "Signing in…"
 
-#: src/components/Collection/CollectionItem/index.tsx
 #: src/components/OverlayEditor/PropertiesPanel.tsx
 #: src/components/Settings/Logs/index.tsx
 #: src/components/StorageMetrics/index.tsx

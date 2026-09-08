@@ -1491,6 +1491,10 @@ msgstr "Erreur lors du chargement des données de la règle"
 msgid "Error: {reason}"
 msgstr "Erreur : {reason}"
 
+#: src/components/Collection/CollectionItem/index.tsx
+msgid "Estimated size"
+msgstr ""
+
 #: src/components/Collection/CollectionDetail/CollectionInfo/CollectionLogsTable.tsx
 msgid "Event"
 msgstr "Événement"
@@ -3674,7 +3678,6 @@ msgstr "Se connecter avec Emby"
 msgid "Signing in…"
 msgstr "Connexion en cours…"
 
-#: src/components/Collection/CollectionItem/index.tsx
 #: src/components/OverlayEditor/PropertiesPanel.tsx
 #: src/components/Settings/Logs/index.tsx
 #: src/components/StorageMetrics/index.tsx

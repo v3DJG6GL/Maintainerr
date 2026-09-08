@@ -1491,6 +1491,10 @@ msgstr "Fel vid inläsning av regeldata"
 msgid "Error: {reason}"
 msgstr "Fel: {reason}"
 
+#: src/components/Collection/CollectionItem/index.tsx
+msgid "Estimated size"
+msgstr ""
+
 #: src/components/Collection/CollectionDetail/CollectionInfo/CollectionLogsTable.tsx
 msgid "Event"
 msgstr "Händelse"
@@ -3674,7 +3678,6 @@ msgstr "Logga in med Emby"
 msgid "Signing in…"
 msgstr "Loggar in…"
 
-#: src/components/Collection/CollectionItem/index.tsx
 #: src/components/OverlayEditor/PropertiesPanel.tsx
 #: src/components/Settings/Logs/index.tsx
 #: src/components/StorageMetrics/index.tsx
