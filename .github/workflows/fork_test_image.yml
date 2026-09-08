@@ -1,0 +1,174 @@
+name: Fork Integration Image
+
+on:
+  push:
+    branches:
+      - codex/integration-preview
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-integration-image
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.repository == 'v3DJG6GL/Maintainerr'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - name: Install native build and YAML dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev yamllint
+      - uses: actions/cache@v6
+        with:
+          path: .yarn/cache
+          key: integration-yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+      - name: Install workspace dependencies
+        run: |
+          corepack enable
+          corepack install
+          yarn --immutable
+      - name: Refresh generated catalogs and formatting
+        run: |
+          yarn workspace @maintainerr/ui i18n:extract
+          yarn format
+      - name: Build contracts
+        id: contracts
+        run: yarn turbo build --filter="./packages/*"
+      - name: Validate translations
+        run: |
+          yarn i18n:validate
+          yarn workspace @maintainerr/ui i18n:check
+      - name: Lint
+        if: ${{ !cancelled() && steps.contracts.conclusion == 'success' }}
+        run: yarn turbo lint --continue=always
+      - name: Typecheck
+        if: ${{ !cancelled() && steps.contracts.conclusion == 'success' }}
+        run: yarn check-types
+      - name: YAML lint
+        if: ${{ !cancelled() && steps.contracts.conclusion == 'success' }}
+        run: yamllint -s .github/workflows/fork_test_image.yml
+      - name: Test
+        if: ${{ !cancelled() && steps.contracts.conclusion == 'success' }}
+        run: yarn turbo test --continue=always --concurrency=1
+      - name: Rule endpoint regression matrix
+        if: ${{ !cancelled() && steps.contracts.conclusion == 'success' }}
+        run: yarn workspace @maintainerr/server test:e2e
+      - name: Build production application
+        if: ${{ !cancelled() && steps.contracts.conclusion == 'success' }}
+        run: yarn build
+      - name: Require generated files and formatting to be committed
+        run: git diff --exit-code
+      - name: Export validation changes
+        if: always()
+        run: git diff --binary > validation.patch
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: validation-changes
+          path: validation.patch
+          retention-days: 7
+
+  build:
+    needs: validate
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux/amd64
+            arch: amd64
+          - os: ubuntu-24.04-arm
+            platform: linux/arm64
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build combined image
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          load: true
+          tags: maintainerr-integration:test
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+            VERSION_TAG=integration-preview
+          labels: |
+            org.opencontainers.image.source=https://github.com/v3DJG6GL/Maintainerr
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=integration-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=integration-${{ matrix.arch }}
+      - name: Smoke-test built image
+        run: |
+          docker run -d --name integration-smoke -p 127.0.0.1:6246:6246 \
+            -e BASE_PATH=/preview -e TELEMETRY=off maintainerr-integration:test
+          trap 'docker logs integration-smoke; docker rm -f integration-smoke' EXIT
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:6246/preview/api/health/ready; then
+              curl -fsS http://127.0.0.1:6246/preview/api/health/live
+              docker exec integration-smoke /opt/app/healthcheck.sh
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
+      - name: Push tested architecture image
+        env:
+          IMAGE: ghcr.io/v3djg6gl/maintainerr
+          SHA: ${{ github.sha }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          docker tag maintainerr-integration:test "$IMAGE:build-$SHA-$ARCH"
+          docker push "$IMAGE:build-$SHA-$ARCH"
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish one combined multi-architecture manifest
+        env:
+          IMAGE: ghcr.io/v3djg6gl/maintainerr
+          SHA: ${{ github.sha }}
+        run: |
+          docker buildx imagetools create \
+            --tag "$IMAGE:integration-preview" --tag "$IMAGE:sha-$SHA" \
+            "$IMAGE:build-$SHA-amd64" "$IMAGE:build-$SHA-arm64"
+          docker buildx imagetools inspect "$IMAGE:sha-$SHA" | tee manifest.txt
+          cat manifest.txt >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: published-manifest
+          path: manifest.txt
+          retention-days: 30
