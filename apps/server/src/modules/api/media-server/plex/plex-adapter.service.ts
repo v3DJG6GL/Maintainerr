@@ -148,6 +148,9 @@ export class PlexAdapterService implements IMediaServerService {
         offset: options?.offset ?? 0,
         size: options?.limit ?? PLEX_PAGE_SIZE.DEFAULT,
         sort: toPlexSort(options?.sort, options?.sortOrder),
+        ...(options?.searchQuery !== undefined
+          ? { searchQuery: options.searchQuery }
+          : {}),
       },
       plexType,
     );

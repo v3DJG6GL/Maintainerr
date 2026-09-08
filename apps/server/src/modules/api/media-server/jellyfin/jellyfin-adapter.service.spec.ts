@@ -474,6 +474,28 @@ describe('JellyfinAdapterService', () => {
       );
     });
 
+    it('combines a search term with native pagination and type filtering', async () => {
+      jellyfinApiMocks.getItems.mockResolvedValue({
+        data: { Items: [], TotalRecordCount: 600 },
+      });
+      const result = await service.getLibraryContents('library-1', {
+        offset: 250,
+        limit: 250,
+        type: 'episode',
+        searchQuery: 'Sample & title',
+      });
+      expect(jellyfinApiMocks.getItems).toHaveBeenCalledWith(
+        expect.objectContaining({
+          parentId: 'library-1',
+          searchTerm: 'Sample & title',
+          startIndex: 250,
+          limit: 250,
+          includeItemTypes: ['Episode'],
+        }),
+      );
+      expect(result.totalSize).toBe(600);
+    });
+
     it('uses Jellyfin native studio sorting', async () => {
       jellyfinApiMocks.getItems.mockResolvedValue({
         data: { Items: [], TotalRecordCount: 0 },

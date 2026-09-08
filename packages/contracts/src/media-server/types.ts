@@ -233,6 +233,7 @@ export interface MediaServerStatus {
  * Options for querying library contents
  */
 export interface LibraryQueryOptions {
+  searchQuery?: string
   type?: MediaItemType
   offset?: number
   limit?: number

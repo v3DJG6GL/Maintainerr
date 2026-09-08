@@ -1003,6 +1003,29 @@ describe('EmbyAdapterService', () => {
   });
 
   describe('getLibraryContents', () => {
+    it('combines a search term with native pagination and type filtering', async () => {
+      http.get.mockResolvedValueOnce({
+        data: { Items: [], TotalRecordCount: 600 },
+      });
+      const result = await service.getLibraryContents('library-1', {
+        offset: 250,
+        limit: 250,
+        type: 'episode',
+        searchQuery: 'Sample & title',
+      });
+      const call = http.get.mock.calls.find(([path]) => path === '/Items');
+      expect(call?.[1]?.params).toEqual(
+        expect.objectContaining({
+          ParentId: 'library-1',
+          SearchTerm: 'Sample & title',
+          StartIndex: 250,
+          Limit: 250,
+          IncludeItemTypes: 'Episode',
+        }),
+      );
+      expect(result.totalSize).toBe(600);
+    });
+
     it('uses Emby native studio sorting', async () => {
       http.get
         .mockResolvedValueOnce({ data: { Items: [], TotalRecordCount: 0 } })

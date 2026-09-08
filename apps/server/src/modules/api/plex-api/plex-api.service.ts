@@ -545,16 +545,26 @@ export class PlexApiService {
       offset = 0,
       size = PLEX_PAGE_SIZE.DEFAULT,
       sort,
-    }: { offset?: number; size?: number; sort?: string } = {},
+      searchQuery,
+    }: {
+      offset?: number;
+      size?: number;
+      sort?: string;
+      searchQuery?: string;
+    } = {},
     datatype?: EPlexDataType,
     useCache: boolean = true,
   ): Promise<{ totalSize: number; items: PlexLibraryItem[] }> {
     try {
       const type = datatype ? '&type=' + datatype : '';
       const sortQuery = sort ? `&sort=${encodeURIComponent(sort)}` : '';
+      const titleQuery =
+        searchQuery !== undefined
+          ? `&title=${encodeURIComponent(searchQuery)}`
+          : '';
       const response = await this.plexClient.query<PlexLibraryResponse>(
         {
-          uri: `/library/sections/${id}/all?includeGuids=1${type}${sortQuery}`,
+          uri: `/library/sections/${id}/all?includeGuids=1${type}${sortQuery}${titleQuery}`,
           extraHeaders: {
             'X-Plex-Container-Start': `${offset}`,
             'X-Plex-Container-Size': `${size}`,

@@ -437,6 +437,28 @@ describe('PlexAdapterService', () => {
       expect(result.totalSize).toBe(0);
     });
 
+    it('passes the search term through with native pagination', async () => {
+      plexApi.getLibraryContents.mockResolvedValue({
+        items: [],
+        totalSize: 600,
+      });
+      const result = await service.getLibraryContents('1', {
+        offset: 250,
+        limit: 250,
+        searchQuery: 'Sample & title',
+      });
+      expect(plexApi.getLibraryContents).toHaveBeenCalledWith(
+        '1',
+        expect.objectContaining({
+          offset: 250,
+          size: 250,
+          searchQuery: 'Sample & title',
+        }),
+        undefined,
+      );
+      expect(result.totalSize).toBe(600);
+    });
+
     it('should call PlexApiService with correct parameters', async () => {
       plexApi.getLibraryContents.mockResolvedValue({
         items: [],

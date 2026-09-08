@@ -369,6 +369,9 @@ export class EmbyAdapterService implements IMediaServerService {
       const { data } = await this.http.get<EmbyItemsQueryResponse>('/Items', {
         params: {
           ParentId: libraryId,
+          ...(options?.searchQuery !== undefined
+            ? { SearchTerm: options.searchQuery }
+            : {}),
           Recursive: true,
           IncludeItemTypes: includeItemTypes,
           Fields: 'ProviderIds,DateCreated,Overview,Tags',

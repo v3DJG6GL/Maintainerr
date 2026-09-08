@@ -813,6 +813,9 @@ export class JellyfinAdapterService implements IMediaServerService {
             ...JELLYFIN_LIBRARY_QUERY_DEFAULTS,
             userId,
             parentId: libraryId,
+            ...(options?.searchQuery !== undefined
+              ? { searchTerm: options.searchQuery }
+              : {}),
             recursive: true,
             startIndex: options?.offset || 0,
             limit: options?.limit || JELLYFIN_BATCH_SIZE.DEFAULT_PAGE_SIZE,

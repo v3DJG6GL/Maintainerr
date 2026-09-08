@@ -352,6 +352,39 @@ describe('PlexApiService.getMetadata', () => {
     );
   });
 
+  it('encodes paginated library search without changing ordinary library requests', async () => {
+    const query = jest
+      .fn()
+      .mockResolvedValue({ MediaContainer: { totalSize: 600 } });
+    Object.assign(service, { plexClient: { query } });
+    await service.getLibraryContents('1', {
+      offset: 250,
+      size: 250,
+      searchQuery: 'Sample & title/ü',
+    });
+    expect(query).toHaveBeenLastCalledWith(
+      {
+        uri: '/library/sections/1/all?includeGuids=1&title=Sample%20%26%20title%2F%C3%BC',
+        extraHeaders: {
+          'X-Plex-Container-Start': '250',
+          'X-Plex-Container-Size': '250',
+        },
+      },
+      true,
+    );
+    await service.getLibraryContents('1', { offset: 0, size: 30 });
+    expect(query).toHaveBeenLastCalledWith(
+      {
+        uri: '/library/sections/1/all?includeGuids=1',
+        extraHeaders: {
+          'X-Plex-Container-Start': '0',
+          'X-Plex-Container-Size': '30',
+        },
+      },
+      true,
+    );
+  });
+
   it('returns a confirmed empty page when a library section has no items', async () => {
     const query = jest.fn().mockResolvedValue({
       MediaContainer: { totalSize: 0 },
