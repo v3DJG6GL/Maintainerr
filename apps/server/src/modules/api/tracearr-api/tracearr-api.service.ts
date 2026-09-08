@@ -1,6 +1,7 @@
 import {
   BasicResponseDto,
   MediaItem,
+  MediaPlaybackSummary,
   MINIMUM_TRACEARR_VERSION,
   TracearrServer,
   TracearrHistoryItem,
@@ -34,6 +35,7 @@ import {
   TRACEARR_SERVER_PROBE_SIZE,
 } from './tracearr-api.constants';
 import { TracearrApi } from './helpers/tracearr-api.helper';
+import { summarizeTracearrPlayback } from './tracearr-playback-summary';
 import { isBelowMinimumVersion } from '../../../utils/required-version-helper';
 
 interface TracearrOpenApiDocument {
@@ -155,6 +157,11 @@ export class TracearrApiService {
       this.episodeIdsByItemId.delete(libItem.id);
       throw error;
     }
+  }
+
+  public getPlaybackSummary(item: MediaItem): MediaPlaybackSummary | undefined {
+    const index = this.getHistoryIndex();
+    return index ? summarizeTracearrPlayback(index, item) : undefined;
   }
 
   public async prefetchHistory(): Promise<void> {
